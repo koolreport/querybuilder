@@ -1,0 +1,11 @@
+{
+    "name": "koolreport/querybuilder",
+    "version":"1.4.0",
+    "description": "Create query by php code",
+    "keywords": ["PHP","php reprting tools","php reporting framework","mysql reporting tools","charts","graphs","query builder","sql query generator"],
+    "homepage": "https://www.koolreport.com",
+    "type": "library",
+    "license": "https://www.koolreport.com/license#mit-license",
+    "require": {
+    }
+}
