@@ -1,4 +1,7 @@
-# Version
+# Version 1.4.0
+    1. Fix aggregate
+
+# Version 1.3.0
     1. Fix error of `where` condition when value is boolean type
     2. Fix the cover identifier for [table.column] format
 

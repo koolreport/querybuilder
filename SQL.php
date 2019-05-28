@@ -163,7 +163,6 @@ class SQL
 
     protected function getJoin($joins)
     {
-        
         $array = array();
         foreach($joins as $join)
         {
@@ -188,10 +187,6 @@ class SQL
             if(gettype($column[0])=="array")
             {
                 //Aggregate
-                $part .= $column[0][0]."(".$this->coverIndentifier($column[0][1]).")";
-            }
-            else
-            {
                 if($column[0][0]=="COUNT" && $column[0][1]==1)
                 {
                     $part .= "COUNT(1)";    
@@ -200,6 +195,10 @@ class SQL
                 {
                     $part .= $column[0][0]."(".$this->coverIndentifier($column[0][1]).")";
                 }
+            }
+            else
+            {
+                $part .= $this->coverIndentifier($column[0]);
             }
             if(isset($column[1]))
             {
