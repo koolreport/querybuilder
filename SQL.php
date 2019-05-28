@@ -14,11 +14,11 @@ class SQL
     
     protected function renderValue($value)
     {
-        if($value==null)
+        if($value===null)
         {
             return "NULL";
         }
-        elseif(gettype($value)=="array")
+        elseif(gettype($value)==="array")
         {
             for($i=0;$i<count($value);$i++)
             {
@@ -29,11 +29,15 @@ class SQL
             }
             return "(".implode(",",$value).")";    
         }
-        elseif(gettype($value)=="string")
+        elseif(gettype($value)==="string")
         {
 
             return $this->coverValue($this->escapeString($value));
         }
+        elseif(gettype($value)==="boolean")
+        {
+            return ($value===true)?1:0;
+        }        
         return $value;
     }
 
@@ -47,7 +51,18 @@ class SQL
     }
     protected function coverIndentifier($name)
     {
-        return $this->indentifierCover[0].$name.$this->indentifierCover[1];
+        $dot = strpos($name,".");
+        if($dot===false)
+        {
+            return $this->indentifierCover[0].$name.$this->indentifierCover[1];
+        }
+        else
+        {
+            $table = substr($name,0,$dot);
+            $column = str_replace($table.".","",$name);
+            return $this->indentifierCover[0].$table.$this->indentifierCover[1]
+                    .".".$this->indentifierCover[0].$column.$this->indentifierCover[1];
+        }
     }
 
     protected function getWhere($conditions)
@@ -177,7 +192,14 @@ class SQL
             }
             else
             {
-                $part .= $this->coverIndentifier($column[0]);
+                if($column[0][0]=="COUNT" && $column[0][1]==1)
+                {
+                    $part .= "COUNT(1)";    
+                }
+                else
+                {
+                    $part .= $column[0][0]."(".$this->coverIndentifier($column[0][1]).")";
+                }
             }
             if(isset($column[1]))
             {

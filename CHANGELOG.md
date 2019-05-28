@@ -1,3 +1,7 @@
+# Version
+    1. Fix error of `where` condition when value is boolean type
+    2. Fix the cover identifier for [table.column] format
+
 # Version 1.2.0
     1. Change function "as" to "alias",
     2. Change function "switch" to "branch"
