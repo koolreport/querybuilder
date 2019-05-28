@@ -154,12 +154,12 @@ Of course, you may not always want to select all columns from a database table. 
 DB::table('users')->select('name', 'email')
 ```
 
-To change name of column, you may use `as` function
+To change name of column, you may use `alias` function
 
 ```
 DB::table('users')
-    ->select('customerName')->as('name')
-    ->addSelect('customerAge')->as('age')
+    ->select('customerName')->alias('name')
+    ->addSelect('customerAge')->alias('age')
 ```
 
 The `distinct` method allows you to force the query to return distinct results:
@@ -567,17 +567,17 @@ $users = DB::table('users')
 )
 ```
 
-#### switch
+#### branch
 
-Sometime you may need clause to apply to query when a parameter has specific value, you may use the `switch` statement.
+Sometime you may need clause to apply to query when a parameter has specific value, you may use the `branch` statement.
 
-You will pass to the `switch` function the list of `Closure` in second parameters.
+You will pass to the `branch` function the list of `Closure` in second parameters.
 
 ```
 $user_role = "admin"; //"registered_user","public"
 
 DB::table('orders')
-    ->switch($user_role,[
+    ->branch($user_role,[
         "admin"=>function($query){
             $query->whereIn('state',['TX','NY','DC'])
         },

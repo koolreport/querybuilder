@@ -104,7 +104,7 @@ class Query
         return $this;
     }
 
-    public function as($name)
+    public function alias($name)
     {
         $index = count($this->columns)-1;
         if($index>-1)
@@ -557,7 +557,7 @@ class Query
         return $this;
     }
 
-    public function switch($value,$array)
+    public function branch($value,$array)
     {
         if(isset($array[$value]) && is_callable($array[$value]))
         {

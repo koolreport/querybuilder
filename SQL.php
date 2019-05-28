@@ -87,7 +87,7 @@ class SQL
             {
                 $result .= " $condition ";
             }
-            else if(is_a($condition,Query::class))
+            else if(is_a($condition,'koolreport\querybuilder\Query'))
             {
                 $result.="(".$this->getWhere($condition->conditions).")";
             }
@@ -214,9 +214,13 @@ class SQL
             {
                 $part .= $this->coverIndentifier($key)." = ".$this->coverValue($this->escapeString($value));
             }
+            elseif(gettype($value)=="boolean")
+            {
+                $part .= $this->coverIndentifier($key)." = ". (($value===true)?"1":"0"); 
+            }            
             else
             {
-                $part .= $this->coverIndentifier($key)." = ".$value;
+                $part .= $this->coverIndentifier($key)." = ".(($value!==null)?$value:"NULL");
             }
             array_push($array,$part);
         }
@@ -233,6 +237,10 @@ class SQL
             {
                 $values[$i] = $this->coverValue($this->escapeString($values[$i]));
             }
+            else if(gettype($values[$i])=="boolean")
+            {
+                $values[$i] = ($values[$i]===true)?"1":"0"; 
+            }            
         }
         for($i=0;$i<count($keys);$i++)
         {
