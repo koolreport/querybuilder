@@ -162,6 +162,15 @@ class Query
         return $this;
     }
 
+    protected function pushStandardCondition($params)
+    {
+        if($params[2]===null && $params[1]==="=")
+        {
+            $params[1] = "IS";
+        }
+        array_push($this->conditions,$params);
+    }
+
 
     public function where()
     {
@@ -192,7 +201,7 @@ class Query
                 break;
             case 3:
                 $this->andCondition();
-                array_push($this->conditions,$params);
+                $this->pushStandardCondition($params);
             break;            
         }
         return $this;
@@ -226,7 +235,7 @@ class Query
             break;
             case 3:
                 $this->orCondition();
-                array_push($this->conditions,$params);
+                $this->pushStandardCondition($params);
             break;            
         }
         return $this;
