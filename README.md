@@ -10,9 +10,23 @@ If you are familiar with `Laravel`, an famous PHP Framework, you will like this 
 
 # Installation
 
-1. Unzip the `querybuilder.zip`
-2. Copy `querybuilder` into `koolreport/packages`
-3. All done!
+## By downloading .zip file
+
+1. [Download](https://www.koolreport.com/packages/querybuilder)
+2. Unzip the zip file
+3. Copy the folder `querybuilder` into `koolreport` folder so that look like below
+
+```bash
+koolreport
+├── core
+├── querybuilder
+```
+
+## By composer
+
+```
+composer require koolreport\querybuilder
+```
 
 # Documentation
 
