@@ -25,7 +25,7 @@ koolreport
 ## By composer
 
 ```
-composer require koolreport\querybuilder
+composer require koolreport/querybuilder
 ```
 
 # Documentation
