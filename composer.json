@@ -1,6 +1,6 @@
 {
     "name": "koolreport/querybuilder",
-    "version":"1.5.0",
+    "version":"1.6.0",
     "description": "Create query by php code",
     "keywords": ["PHP","php reprting tools","php reporting framework","mysql reporting tools","charts","graphs","query builder","sql query generator"],
     "homepage": "https://www.koolreport.com",

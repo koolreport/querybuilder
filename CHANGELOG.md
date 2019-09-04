@@ -1,5 +1,9 @@
 # Change Log
 
+## Version 1.6.0 (new version)
+
+1. Fix the selectRaw rendering
+
 ## Version 1.5.0
 
 1. Change README
