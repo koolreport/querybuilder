@@ -399,13 +399,13 @@ class Query
     public function whereRaw($raw,$params=null)
     {
         $this->andCondition();
-        array_push($this->conditions,array("[{raw}]",$raw));
+        array_push($this->conditions,array("[{raw}]", DB::raw($raw,$params)));
         return $this;
     }
     public function orWhereRaw($raw)
     {
         $this->orCondition();
-        array_push($this->conditions,array("[{raw}]",$raw));
+        array_push($this->conditions,array("[{raw}]",DB::raw($raw,$params)));
         return $this;
     }
     
@@ -435,9 +435,9 @@ class Query
         return $this;
     }
 
-    public function orderByRaw($raw)
+    public function orderByRaw($raw, $params=null)
     {
-        array_push($this->orders,array("[{raw}]",$raw));
+        array_push($this->orders, array("[{raw}]", DB::raw($raw, $params)));
         return $this;
     }
 
@@ -488,23 +488,23 @@ class Query
         return $this;
     }
 
-    public function havingRaw($raw)
+    public function havingRaw($raw, $params=null)
     {
         if(!$this->having)
         {
             $this->having = new Query;
         }
-        $this->having->whereRaw($raw);
+        $this->having->whereRaw($raw, $params);
         return $this;        
     }
 
-    public function orHavingRaw($raw)
+    public function orHavingRaw($raw, $params=null)
     {
         if(!$this->having)
         {
             $this->having = new Query;
         }
-        $this->having->orWhereRaw($raw);
+        $this->having->orWhereRaw($raw, $params);
         return $this;        
     }
 
