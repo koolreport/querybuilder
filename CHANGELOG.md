@@ -3,6 +3,11 @@
 ## Version 1.6.0 (new version)
 
 1. Fix the selectRaw rendering
+2. Adding parameters to whereRaw(), havingRaw(), orderByRaw() methods
+3. Add options to set quotes for identifiers
+4. Make default not use quotes for identifiers
+5. SQLServer: Generate correct query for limit and offset
+6. Query: Adding groupByRaw() method
 
 ## Version 1.5.0
 

@@ -4,5 +4,5 @@ namespace koolreport\querybuilder;
 
 class PostgreSQL extends SQL
 {
-    protected $indentifierCover=array("","");
+    protected $identifierQuotes=array('"','"');//For table name and column name
 }

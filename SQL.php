@@ -5,11 +5,16 @@ namespace koolreport\querybuilder;
 class SQL
 {
     protected $query;
-    protected $indentifierCover=array("`","`");//For table name and column name
+    protected $identifierQuotes=null;
     protected $escapeValue = true;
-    public function __construct($query)
+    public function __construct($query, $quoteIdentifier=false)
     {
         $this->query = $query;
+        if (!$quoteIdentifier) {
+            $this->identifierQuotes = null;
+        } elseif (gettype($quoteIdentifier)==="array") {
+            $this->identifierQuotes = $quoteIdentifier;
+        }
     }
     
     protected function renderValue($value)
@@ -39,16 +44,19 @@ class SQL
     {
         return "'$value'";
     }
-    protected function coverIndentifier($name)
+    protected function quoteIdentifier($name)
     {
+        if ($this->identifierQuotes===null || $this->identifierQuotes===array()) {
+            return $name;
+        }
         $dot = strpos($name, ".");
         if ($dot===false) {
-            return $this->indentifierCover[0].$name.$this->indentifierCover[1];
+            return $this->identifierQuotes[0].$name.$this->identifierQuotes[1];
         } else {
             $table = substr($name, 0, $dot);
             $column = str_replace($table.".", "", $name);
-            return $this->indentifierCover[0].$table.$this->indentifierCover[1]
-                    .".".$this->indentifierCover[0].$column.$this->indentifierCover[1];
+            return $this->identifierQuotes[0].$table.$this->identifierQuotes[1]
+                    .".".$this->identifierQuotes[0].$column.$this->identifierQuotes[1];
         }
     }
 
@@ -60,7 +68,7 @@ class SQL
                 switch ($condition[0]) {
                     case "[{exists}]":
                         $class = get_class($this);
-                        $object = new $class($condition[1]);
+                        $object = new $class($condition[1], $this->identifierQuotes);
                         $result.="exists( ".$object->buildQuery()." )";
                     break;
                     case "[{raw}]":
@@ -68,10 +76,10 @@ class SQL
                     break;
                     default:
                         $part = "{key} {operator} {value}";
-                        $part = str_replace("{key}", $this->coverIndentifier($condition[0]), $part);
+                        $part = str_replace("{key}", $this->quoteIdentifier($condition[0]), $part);
                         $part = str_replace("{operator}", $condition[1], $part);
                         if (gettype($condition[2])=="string" && strpos($condition[2], "[{colName}]")===0) {
-                            $part = str_replace("{value}", str_replace("[{colName}]", "", $this->coverIndentifier($condition[2])), $part);
+                            $part = str_replace("{value}", str_replace("[{colName}]", "", $this->quoteIdentifier($condition[2])), $part);
                         } else {
                             $part = str_replace("{value}", $this->renderValue($condition[2]), $part);
                         }
@@ -93,10 +101,10 @@ class SQL
         foreach ($tables as $table) {
             if (gettype($table)=="array") {
                 $class = get_class($this);
-                $interpreter = new $class($table[0]);
-                array_push($array, "(".$interpreter->buildQuery().") ".$this->coverIndentifier($table[1]));
+                $interpreter = new $class($table[0], $this->identifierQuotes);
+                array_push($array, "(".$interpreter->buildQuery().") ".$this->quoteIdentifier($table[1]));
             } else {
-                array_push($array, $this->coverIndentifier($table));
+                array_push($array, $this->quoteIdentifier($table));
             }
         }
         return implode(", ", $array);
@@ -109,7 +117,7 @@ class SQL
             if ($order[0]=="[{raw}]") {
                 array_push($array, $order[1]);
             } else {
-                array_push($array, $this->coverIndentifier($order[0])." ".$order[1]);
+                array_push($array, $this->quoteIdentifier($order[0])." ".$order[1]);
             }
         }
         return implode(", ", $array);
@@ -119,7 +127,12 @@ class SQL
     {
         $array = array();
         foreach ($groups as $group) {
-            array_push($array, $this->coverIndentifier($group));
+            if (strpos($group, "[{raw}]")!==false) {
+                $group = str_replace("[{raw}]", "", $group);
+                array_push($array, $group);
+            } else {
+                array_push($array, $this->quoteIdentifier($group));
+            }
         }
         return implode(", ", $array);
     }
@@ -134,8 +147,8 @@ class SQL
         $array = array();
         foreach ($joins as $join) {
             $class = get_class($this);
-            $object = new $class($join[1]);
-            $part = " $join[0] ".$this->coverIndentifier($join[1]);
+            $object = new $class($join[1], $this->identifierQuotes);
+            $part = " $join[0] ".$this->quoteIdentifier($join[1]);
             if (isset($join[2])) {
                 $part.=" ON ".$object->getWhere($join[2]->conditions);
             }
@@ -154,17 +167,17 @@ class SQL
                 if ($column[0][0]=="COUNT" && $column[0][1]==1) {
                     $part .= "COUNT(1)";
                 } else {
-                    $part .= $column[0][0]."(".$this->coverIndentifier($column[0][1]).")";
+                    $part .= $column[0][0]."(".$this->quoteIdentifier($column[0][1]).")";
                 }
             } else {
                 if (strpos($column[0], "[{raw}]")===0) {
                     $part .= str_replace("[{raw}]", "", $column[0]);
                 } else {
-                    $part .= $this->coverIndentifier($column[0]);
+                    $part .= $this->quoteIdentifier($column[0]);
                 }
             }
             if (isset($column[1])) {
-                $part .= " AS ".$this->coverIndentifier($column[1]);
+                $part .= " AS ".$this->quoteIdentifier($column[1]);
             }
             array_push($array, $part);
         }
@@ -175,7 +188,7 @@ class SQL
         $res = "";
         $class = get_class($this);
         foreach ($unions as $union) {
-            $interpreter = new $class($union);
+            $interpreter = new $class($union, $this->identifierQuotes);
             $res.=" UNION (".$interpreter->buildQuery().")";
         }
         return $res;
@@ -187,13 +200,13 @@ class SQL
         foreach ($list as $key=>$value) {
             $part = "";
             if (gettype($value)=="array") {
-                $part.=$this->coverIndentifier($key)." = ".$this->coverIndentifier($value[0])." $value[1] $value[2]";
+                $part.=$this->quoteIdentifier($key)." = ".$this->quoteIdentifier($value[0])." $value[1] $value[2]";
             } elseif (gettype($value)=="string") {
-                $part .= $this->coverIndentifier($key)." = ".$this->coverValue($this->escapeString($value));
+                $part .= $this->quoteIdentifier($key)." = ".$this->coverValue($this->escapeString($value));
             } elseif (gettype($value)=="boolean") {
-                $part .= $this->coverIndentifier($key)." = ". (($value===true)?"1":"0");
+                $part .= $this->quoteIdentifier($key)." = ". (($value===true)?"1":"0");
             } else {
-                $part .= $this->coverIndentifier($key)." = ".(($value!==null)?$value:"NULL");
+                $part .= $this->quoteIdentifier($key)." = ".(($value!==null)?$value:"NULL");
             }
             array_push($array, $part);
         }
@@ -212,122 +225,141 @@ class SQL
             }
         }
         for ($i=0;$i<count($keys);$i++) {
-            $keys[$i] = $this->coverIndentifier($keys[$i]);
+            $keys[$i] = $this->quoteIdentifier($keys[$i]);
         }
         
         return ' ('.implode(", ", $keys).')'.' VALUES '.'('.implode(", ", $values).')';
     }
 
-    public function buildQuery()
+    protected function buildSelectQuery()
     {
-        $sql="";
-        switch ($this->query->type) {
-            case "select":
-                $sql .= "SELECT ";
-                if ($this->query->distinct) {
-                    $sql.="DISTINCT ";
-                }
-                if (count($this->query->columns)>0) {
-                    $sql.=$this->getSelect($this->query->columns);
-                } else {
-                    $sql.="*";
-                }
-                if (count($this->query->tables)>0) {
-                    $sql.=" FROM ".$this->getFrom($this->query->tables);
-                } else {
-                    throw new \Exception("No table available in SQL Query");
-                }
+        $sql = "SELECT ";
+        if ($this->query->distinct) {
+            $sql.="DISTINCT ";
+        }
+        if (count($this->query->columns)>0) {
+            $sql.=$this->getSelect($this->query->columns);
+        } else {
+            $sql.="*";
+        }
+        if (count($this->query->tables)>0) {
+            $sql.=" FROM ".$this->getFrom($this->query->tables);
+        } else {
+            throw new \Exception("No table available in SQL Query");
+        }
 
-                if (count($this->query->joins)>0) {
-                    $sql.=$this->getJoin($this->query->joins);
-                }
+        if (count($this->query->joins)>0) {
+            $sql.=$this->getJoin($this->query->joins);
+        }
 
-                if (count($this->query->conditions)>0) {
-                    $sql.=" WHERE ".$this->getWhere($this->query->conditions);
-                }
+        if (count($this->query->conditions)>0) {
+            $sql.=" WHERE ".$this->getWhere($this->query->conditions);
+        }
 
-                if (count($this->query->groups)>0) {
-                    $sql.=" GROUP BY ".$this->getGroupBy($this->query->groups);
-                }
+        if (count($this->query->groups)>0) {
+            $sql.=" GROUP BY ".$this->getGroupBy($this->query->groups);
+        }
 
-                if ($this->query->having) {
-                    $sql.=" HAVING ".$this->getHaving($this->query->having);
-                }
+        if ($this->query->having) {
+            $sql.=" HAVING ".$this->getHaving($this->query->having);
+        }
 
 
-                if (count($this->query->orders)>0) {
-                    $sql.=" ORDER BY ".$this->getOrderBy($this->query->orders);
-                }
+        if (count($this->query->orders)>0) {
+            $sql.=" ORDER BY ".$this->getOrderBy($this->query->orders);
+        }
 
-                if ($this->query->limit!==null) {
-                    $sql.=" LIMIT ".$this->query->limit;
-                }
+        if ($this->query->limit!==null) {
+            $sql.=" LIMIT ".$this->query->limit;
+        }
 
-                if ($this->query->offset!==null) {
-                    $sql.=" OFFSET ".$this->query->offset;
-                }
+        if ($this->query->offset!==null) {
+            $sql.=" OFFSET ".$this->query->offset;
+        }
 
-                if (count($this->query->unions)>0) {
-                    $sql.=$this->getUnions($this->query->unions);
-                }
-                if ($this->query->lock) {
-                    $sql.=" ".$this->query->lock;
-                }
-            break;
-            case "update":
-                $sql .= "UPDATE ";
-                if (count($this->query->tables)==1) {
-                    $sql .= $this->getFrom(array($this->query->tables[0]));
-                } elseif (count($this->query->tables)>1) {
-                    throw new \Exception("Only one table is updated");
-                } else {
-                    throw new \Exception("Update query need table specified");
-                }
-                if (count($this->query->values)>0) {
-                    $sql .= " SET ".$this->getUpdateSet($this->query->values);
-                }
-                
-                if (count($this->query->conditions)>0) {
-                    $sql .= " WHERE ".$this->getWhere($this->query->conditions);
-                }
-            break;
-            case "insert":
-                $sql .= "INSERT INTO ";
-                if (count($this->query->tables)==1) {
-                    $sql .= $this->getFrom(array($this->query->tables[0]));
-                } elseif (count($this->query->tables)>1) {
-                    throw new \Exception("Only one table is inserted");
-                } else {
-                    throw new \Exception("Insert query need a table specified");
-                }
-                if (count($this->query->values)>0) {
-                    $sql .= $this->getInsertValues($this->query->values);
-                }
-                if (count($this->query->conditions)>0) {
-                    $sql .= " WHERE ".$this->getWhere($this->query->conditions);
-                }
-            break;
-            case "delete":
-                $sql .= "DELETE FROM ";
-                if (count($this->query->tables)==1) {
-                    $sql .= $this->getFrom(array($this->query->tables[0]));
-                } elseif (count($this->query->tables)>1) {
-                    throw new \Exception("Only one table is deleted");
-                } else {
-                    throw new \Exception("Delete query need a table specified");
-                }
-                if (count($this->query->conditions)>0) {
-                    $sql .= " WHERE ".$this->getWhere($this->query->conditions);
-                }
-            break;
+        if (count($this->query->unions)>0) {
+            $sql.=$this->getUnions($this->query->unions);
+        }
+        if ($this->query->lock) {
+            $sql.=" ".$this->query->lock;
         }
         return $sql;
     }
 
-    public static function type($query)
+    protected function buildUpdateQuery()
+    {
+        $sql = "UPDATE ";
+        if (count($this->query->tables)==1) {
+            $sql .= $this->getFrom(array($this->query->tables[0]));
+        } elseif (count($this->query->tables)>1) {
+            throw new \Exception("Only one table is updated");
+        } else {
+            throw new \Exception("Update query need table specified");
+        }
+        if (count($this->query->values)>0) {
+            $sql .= " SET ".$this->getUpdateSet($this->query->values);
+        }
+        
+        if (count($this->query->conditions)>0) {
+            $sql .= " WHERE ".$this->getWhere($this->query->conditions);
+        }
+        return $sql;
+    }
+
+    protected function buildInsertQuery()
+    {
+        $sql = "INSERT INTO ";
+        if (count($this->query->tables)==1) {
+            $sql .= $this->getFrom(array($this->query->tables[0]));
+        } elseif (count($this->query->tables)>1) {
+            throw new \Exception("Only one table is inserted");
+        } else {
+            throw new \Exception("Insert query need a table specified");
+        }
+        if (count($this->query->values)>0) {
+            $sql .= $this->getInsertValues($this->query->values);
+        }
+        if (count($this->query->conditions)>0) {
+            $sql .= " WHERE ".$this->getWhere($this->query->conditions);
+        }
+        return $sql;
+    }
+    protected function buildDeleteQuery()
+    {
+        $sql .= "DELETE FROM ";
+        if (count($this->query->tables)==1) {
+            $sql .= $this->getFrom(array($this->query->tables[0]));
+        } elseif (count($this->query->tables)>1) {
+            throw new \Exception("Only one table is deleted");
+        } else {
+            throw new \Exception("Delete query need a table specified");
+        }
+        if (count($this->query->conditions)>0) {
+            $sql .= " WHERE ".$this->getWhere($this->query->conditions);
+        }
+        return $sql;
+    }
+
+
+    public function buildQuery()
+    {
+        switch ($this->query->type) {
+            case "select":
+                return $this->buildSelectQuery();
+            case "update":
+                return $this->buildUpdateQuery();
+            case "insert":
+                return $this->buildInsertQuery();
+            case "delete":
+                return $this->buildDeleteQuery();
+        }
+        return "Unknown query type";
+    }
+
+    public static function type($query, $quoteIdentifier=false)
     {
         $class = get_called_class();
-        $interpreter = new $class($query);
+        $interpreter = new $class($query, $quoteIdentifier);
         return $interpreter->buildQuery();
     }
 }

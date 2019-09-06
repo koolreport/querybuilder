@@ -415,6 +415,18 @@ class Query
         }
         return $this;
     }
+
+    public function groupByRaw()
+    {
+        $params = func_get_args();
+        foreach ($params as $group) {
+            if (!in_array("[{raw}]".$group, $this->groups)) {
+                array_push($this->groups, "[{raw}]".$group);
+            }
+        }
+        return $this;
+    }
+
     public function having()
     {
         $params = func_get_args();
@@ -619,24 +631,24 @@ class Query
         return $this;
     }
     //------------------//
-    public function toSQL()
+    public function toSQL($quoteIdentifier=false)
     {
-        $interpreter = new SQL($this);
+        $interpreter = new SQL($this, $quoteIdentifier);
         return $interpreter->buildQuery();
     }
-    public function toMySQL()
+    public function toMySQL($quoteIdentifier=false)
     {
-        $interpreter = new MySQL($this);
+        $interpreter = new MySQL($this, $quoteIdentifier);
         return $interpreter->buildQuery();
     }
-    public function toPostgreSQL()
+    public function toPostgreSQL($quoteIdentifier=false)
     {
-        $interpreter = new PostgreSQL($this);
+        $interpreter = new PostgreSQL($this, $quoteIdentifier);
         return $interpreter->buildQuery();
     }
-    public function toSQLServer()
+    public function toSQLServer($quoteIdentifier=false)
     {
-        $interpreter = new PostgreSQL($this);
+        $interpreter = new SQLServer($this, $quoteIdentifier);
         return $interpreter->buildQuery();
     }
 
