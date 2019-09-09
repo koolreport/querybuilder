@@ -1,6 +1,6 @@
 # Change Log
 
-## Version 1.6.0 (new version)
+## Version 2.0.0 (new version)
 
 1. Fix the selectRaw rendering
 2. Adding parameters to whereRaw(), havingRaw(), orderByRaw() methods
