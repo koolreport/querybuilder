@@ -692,9 +692,7 @@ class Query
         if ($arr!==null) {
             $arr = $this->rebuildSubQueries($arr);
             foreach ($arr as $key=>$value) {
-                if (isset($this->$key)) {
                     $this->$key = $value;
-                }
             }
         }
     }

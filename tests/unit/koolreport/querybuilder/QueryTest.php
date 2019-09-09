@@ -67,9 +67,24 @@ class QueryTest extends \Codeception\Test\Unit
         $query = Query::create([
             "type"=>"select",
             "tables"=>["orders"],
+            "limit"=>2
         ]);
         $sql = $query->toMySQL();
-        $this->assertEquals($sql, "SELECT * FROM orders");
+        $this->assertEquals("SELECT * FROM orders LIMIT 2",$sql);
+    }
+
+    public function testToArray()
+    {
+        $query = Query::create([
+            "type"=>"select",
+            "tables"=>["orders"],
+            "limit"=>2,
+            "offset"=>3,
+            "distinct"=>true,
+            "lock"=>true,
+        ]);
+        $str_arr = json_encode($query->toArray());
+        $this->assertEquals("abc",$str_arr);
     }
 
     public function testSerialize()

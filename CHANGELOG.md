@@ -2,15 +2,15 @@
 
 ## Version 2.0.0 (new version)
 
-1. Fix the selectRaw rendering
-2. Adding parameters to whereRaw(), havingRaw(), orderByRaw() methods
-3. Add options to set quotes for identifiers
-4. Make default not use quotes for identifiers
-5. SQLServer: Generate correct query for limit and offset
-6. Query: Add groupByRaw() method
-7. Query: Add create() static function to create query from array
-8. Query: Adding toArray() function to export query to array format
-9. Query: Add fill() method to quickly fill query with array
+1. `Query`: Fix the selectRaw rendering
+2. `Query`: Adding parameters to `whereRaw()`, `havingRaw()`, `orderByRaw()` methods
+3. `SQL`: Add options to set quotes for identifiers
+4. `SQL`: Make default not use quotes for identifiers
+5. `SQLServer`: Generate correct query for limit and offset
+6. `Query`: Add `groupByRaw()` method
+7. `Query`: Add `create()` static function to create query from array
+8. `Query`: Adding `toArray()` function to export query to array format
+9. `Query`: Add `fill()` method to quickly fill query with array
 
 ## Version 1.5.0
 
