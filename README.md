@@ -134,7 +134,7 @@ DB::table('orders')->groupBy('country')->sum('amount')
 DB::table('orders')->count()
 
 DB::table('customers')->groupBy('state')
-    ->avg('income')->as('avgIncome')
+    ->avg('income')->alias('avgIncome')
 ```
 
 ## Sub query table
@@ -215,7 +215,7 @@ The `havingRaw` and `orHavingRaw` methods may be used to set a raw string as the
 ```
 DB::table('orders')
     ->select('department')
-    ->sum('price')->as('total_sales')
+    ->sum('price')->alias('total_sales')
     ->groupBy('department')
     ->havingRaw('SUM(price) > 2500')
 ```
