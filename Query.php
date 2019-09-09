@@ -16,9 +16,7 @@ class Query
     public $joins;
     public $distinct = false;
     public $unions;
-
     public $values;
-
     public $lock = null;
 
     public function __construct()
@@ -655,5 +653,61 @@ class Query
     public function __toString()
     {
         return $this->toSQL();
+    }
+
+
+    /**
+     * Check if there is sub serialized query
+     * and convert it to query
+     */
+    protected function rebuildSubQueries($arr)
+    {
+        if(!gettype($arr)=="array") {
+            return $arr;
+        }
+
+        foreach($arr as $key=>$value)
+        {
+            if( gettype($value)=="array"){
+
+                if ( isset($value["type"])
+                    && isset($value["tables"])
+                    && isset($value["columns"])
+                    && isset($value["conditions"])
+                    && isset($value["groups"])
+                    && isset($value["orders"])
+                ) {
+                    $class = get_class($this);
+                    $arr[$key] = $class::create($value);
+                } else {
+                    $arr[$key] = $this->rebuildSubQueries($value);
+                }
+            }
+            return $arr;
+        }
+    }
+
+    public function fill($arr)
+    {
+        if ($arr!==null) {
+            $arr = $this->rebuildSubQueries($arr);
+            foreach ($arr as $key=>$value) {
+                if (isset($this->$key)) {
+                    $this->$key = $value;
+                }
+            }
+        }
+    }
+
+    public static function create($arr)
+    {
+        $query = new Query;
+        $query->fill($arr);
+        return $query;
+    }
+
+    public function toArray()
+    {
+        return get_object_vars($this);
     }
 }

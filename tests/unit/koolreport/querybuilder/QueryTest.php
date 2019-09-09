@@ -11,7 +11,7 @@ class QueryTest extends \Codeception\Test\Unit
     public function testSelectRaw()
     {
         $sql =  DB::table('orders')->selectRaw('price * ? as price_with_tax', [1.0825])->toMySQL();
-        $this->assertEquals($sql,"SELECT price * 1.0825 as price_with_tax FROM orders");
+        $this->assertEquals($sql, "SELECT price * 1.0825 as price_with_tax FROM orders");
     }
 
     public function testCoverIdentity()
@@ -61,4 +61,24 @@ class QueryTest extends \Codeception\Test\Unit
         ->groupByRaw('DAY(created_time)')->toMySQL(true);
         $this->assertEquals($sql3, "SELECT * FROM `orders` GROUP BY DAY(created_time)");
     }
+
+    public function testCreate()
+    {
+        $query = Query::create([
+            "type"=>"select",
+            "tables"=>["orders"],
+        ]);
+        $sql = $query->toMySQL();
+        $this->assertEquals($sql, "SELECT * FROM orders");
+    }
+
+    public function testSerialize()
+    {
+        $st = '{"type":"select","tables":["orders",[{"type":"select","tables":["orderdetails"],"columns":[["amount"]],"conditions":[],"orders":[],"groups":[],"having":null,"limit":null,"offset":null,"joins":[],"distinct":false,"unions":[],"values":[],"lock":null},"t"]],"columns":[["name","firstName"]],"conditions":[],"orders":[],"groups":["name"],"having":null,"limit":null,"offset":null,"joins":[["JOIN","customers",{"type":"select","tables":[],"columns":[],"conditions":[["customerId","=","[{colName}]id"]],"orders":[],"groups":[],"having":null,"limit":null,"offset":null,"joins":[],"distinct":false,"unions":[],"values":[],"lock":null}]],"distinct":false,"unions":[],"values":[],"lock":null}';
+
+        $query = Query::create(json_decode($st,true));
+        $serial = json_encode($query->toArray());
+        $this->assertEquals($serial, $st);
+    }
+
 }

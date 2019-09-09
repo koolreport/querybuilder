@@ -7,7 +7,10 @@
 3. Add options to set quotes for identifiers
 4. Make default not use quotes for identifiers
 5. SQLServer: Generate correct query for limit and offset
-6. Query: Adding groupByRaw() method
+6. Query: Add groupByRaw() method
+7. Query: Add create() static function to create query from array
+8. Query: Adding toArray() function to export query to array format
+9. Query: Add fill() method to quickly fill query with array
 
 ## Version 1.5.0
 
