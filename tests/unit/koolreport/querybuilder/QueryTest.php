@@ -67,6 +67,7 @@ class QueryTest extends \Codeception\Test\Unit
         $query = Query::create([
             "type"=>"select",
             "tables"=>["orders"],
+            "groups"=>["name"],
             "limit"=>2
         ]);
         $sql = $query->toMySQL();
