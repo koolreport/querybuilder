@@ -1,5 +1,9 @@
 # Change Log
 
+## Version 2.5.0
+
+1. Enhance the `selectRaw()`, `whereRaw()` and `orderByRaw()`
+
 ## Version 2.0.0
 
 1. `Query`: Fix the selectRaw rendering
