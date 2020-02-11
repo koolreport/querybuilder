@@ -357,13 +357,13 @@ class Query
     public function whereRaw($raw, $params=null)
     {
         $this->andCondition();
-        array_push($this->conditions, array("[{raw}]", DB::raw($raw, $params)));
+        array_push($this->conditions, DB::raw($raw, $params));
         return $this;
     }
     public function orWhereRaw($raw)
     {
         $this->orCondition();
-        array_push($this->conditions, array("[{raw}]",DB::raw($raw, $params)));
+        array_push($this->conditions, DB::raw($raw, $params));
         return $this;
     }
     
@@ -388,7 +388,7 @@ class Query
 
     public function orderByRaw($raw, $params=null)
     {
-        array_push($this->orders, array("[{raw}]", DB::raw($raw, $params)));
+        array_push($this->orders, DB::raw($raw, $params));
         return $this;
     }
 
