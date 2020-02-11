@@ -71,7 +71,7 @@ class QueryTest extends \Codeception\Test\Unit
             "limit"=>2
         ]);
         $sql = $query->toMySQL();
-        $this->assertEquals("SELECT * FROM orders LIMIT 2",$sql);
+        $this->assertEquals("SELECT * FROM orders GROUP BY name LIMIT 2",$sql);
     }
 
     public function testToArray()
@@ -95,6 +95,13 @@ class QueryTest extends \Codeception\Test\Unit
         $query = Query::create(json_decode($st,true));
         $serial = json_encode($query->toArray());
         $this->assertEquals($serial, $st);
+    }
+
+    public function testWhereRaw()
+    {
+        $query = new Query();
+        $query->whereRaw("a>b")->from("test");
+        $this->assertEquals("SELECT * FROM test WHERE a>b",$query->toMySQL());
     }
 
 }

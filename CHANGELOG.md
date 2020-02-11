@@ -1,6 +1,6 @@
 # Change Log
 
-## Version 2.0.0 (new version)
+## Version 2.0.0
 
 1. `Query`: Fix the selectRaw rendering
 2. `Query`: Adding parameters to `whereRaw()`, `havingRaw()`, `orderByRaw()` methods
@@ -11,6 +11,7 @@
 7. `Query`: Add `create()` static function to create query from array
 8. `Query`: Adding `toArray()` function to export query to array format
 9. `Query`: Add `fill()` method to quickly fill query with array
+10. `Query`: Fix the whereRaw binding params
 
 ## Version 1.5.0
 
