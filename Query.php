@@ -222,15 +222,31 @@ class Query
     {
         return $this->where($name, 'IS NOT', null);
     }
+    public function orWhereNull($name)
+    {
+        return $this->orWhere($name, 'IS', null);
+    }
+    public function orWhereNotNull($name)
+    {
+        return $this->orWhere($name, 'IS NOT', null);
+    }
 
     //In
     public function whereIn($name, $array)
     {
         return $this->where($name, 'IN', $array);
     }
-    public function whereNotIn()
+    public function whereNotIn($name, $array)
     {
         return $this->where($name, 'NOT IN', $array);
+    }
+    public function orWhereIn($name, $array)
+    {
+        return $this->orWhere($name, 'IN', $array);
+    }
+    public function orWhereNotIn($name, $array)
+    {
+        return $this->orWhere($name, 'NOT IN', $array);
     }
 
     //Between
@@ -249,6 +265,21 @@ class Query
         });
         return $this;
     }
+    public function orWhereBetween($name, $array)
+    {
+        return $this->orWhere(array(
+            array($name,">=",$array[0]),
+            array($name,"<=",$array[1])
+        ));
+    }
+    public function orWhereNotBetween($name, $array)
+    {
+        $this->orWhere(function ($query) use ($name,$array) {
+            $query->where($name, "<", $array[0])
+            ->orWhere($name, ">", $array[1]);
+        });
+        return $this;
+    }
 
     //Datetime
 
@@ -261,6 +292,18 @@ class Query
             return $this->where("$name($params[0])", "=", $params[1]);
         } elseif ($c>2) {
             return $this->where("$name($params[0])", $params[1], $params[2]);
+        }
+        return $this;
+    }
+    protected function orWhereFunction($name, $params)
+    {
+        $c = count($params);
+        if ($c==1) {
+            return $this->orWhere("$name($params[0])", "=", date("Y-m-d"));
+        } elseif ($c==2) {
+            return $this->orWhere("$name($params[0])", "=", $params[1]);
+        } elseif ($c>2) {
+            return $this->orWhere("$name($params[0])", $params[1], $params[2]);
         }
         return $this;
     }
@@ -284,6 +327,26 @@ class Query
     public function whereTime()
     {
         return $this->whereFunction("TIME", func_get_args());
+    }
+    public function orWhereDate()
+    {
+        return $this->whereFunction("DATE", func_get_args());
+    }
+    public function orWhereDay()
+    {
+        return $this->orWhereFunction("DAY", func_get_args());
+    }
+    public function orWhereMonth()
+    {
+        return $this->orWhereFunction("MONTH", func_get_args());
+    }
+    public function orWhereYear()
+    {
+        return $this->orWhereFunction("YEAR", func_get_args());
+    }
+    public function orWhereTime()
+    {
+        return $this->orWhereFunction("TIME", func_get_args());
     }
 
     //Column
@@ -353,6 +416,19 @@ class Query
         }
         return $this;
     }
+    public function orWhereExists($table)
+    {
+        if (is_callable($table)) {
+            $query = new Query;
+            $table($query);
+            $this->orCondition();
+            array_push($this->conditions, array("[{exists}]",$query));
+        } else {
+            throw new \Exception("whereExists() required function as parameter");
+        }
+        return $this;
+    }
+
     //Raw
     public function whereRaw($raw, $params=null)
     {
