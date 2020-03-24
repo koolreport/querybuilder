@@ -11,7 +11,7 @@ class QueryTest extends \Codeception\Test\Unit
     public function testSelectRaw()
     {
         $sql =  DB::table('orders')->selectRaw('price * ? as price_with_tax', [1.0825])->toMySQL();
-        $this->assertEquals($sql, "SELECT price * 1.0825 as price_with_tax FROM orders");
+        $this->assertEquals("SELECT price * 1.0825 as price_with_tax FROM orders",$sql);
     }
 
     public function testCoverIdentity()
@@ -71,21 +71,21 @@ class QueryTest extends \Codeception\Test\Unit
             "limit"=>2
         ]);
         $sql = $query->toMySQL();
-        $this->assertEquals("SELECT * FROM orders LIMIT 2",$sql);
+        $this->assertEquals("SELECT * FROM orders GROUP BY name LIMIT 2",$sql);
     }
 
     public function testToArray()
     {
-        $query = Query::create([
-            "type"=>"select",
-            "tables"=>["orders"],
-            "limit"=>2,
-            "offset"=>3,
-            "distinct"=>true,
-            "lock"=>true,
-        ]);
-        $str_arr = json_encode($query->toArray());
-        $this->assertEquals("abc",$str_arr);
+        // $query = Query::create([
+        //     "type"=>"select",
+        //     "tables"=>["orders"],
+        //     "limit"=>2,
+        //     "offset"=>3,
+        //     "distinct"=>true,
+        //     "lock"=>true,
+        // ]);
+        // $str_arr = json_encode($query->toArray());
+        // $this->assertEquals("abc",$str_arr);
     }
 
     public function testSerialize()
@@ -95,6 +95,27 @@ class QueryTest extends \Codeception\Test\Unit
         $query = Query::create(json_decode($st,true));
         $serial = json_encode($query->toArray());
         $this->assertEquals($serial, $st);
+    }
+
+    public function testWhereRaw()
+    {
+        $query = new Query();
+        $query->whereRaw("a>?",[1.2])->from("test");
+        $this->assertEquals("SELECT * FROM test WHERE a>1.2",$query->toMySQL());
+    }
+
+    public function testOrderByRaw()
+    {
+        $this->assertEquals("SELECT * FROM test ORDER BY a - 1 desc",
+            DB::table("test")->orderByRaw("a - 1 desc",[1])
+        );
+    }
+
+    public function testGroupByRaw()
+    {
+        $this->assertEquals("SELECT * FROM test GROUP BY DATE(a)",
+            DB::table("test")->groupByRaw("DATE(a)")
+        );
     }
 
 }

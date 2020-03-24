@@ -28,7 +28,7 @@ class DB
                 }
             }    
         }
-        return "[{raw}]".$text;
+        return array("[{raw}]",$text);
     }
     static function escapeString($string)
     {

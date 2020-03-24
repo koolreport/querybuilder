@@ -163,18 +163,16 @@ class SQL
         foreach ($columns as $column) {
             $part = "";
             if (gettype($column[0])=="array") {
-                //Aggregate
-                if ($column[0][0]=="COUNT" && $column[0][1]==1) {
+                //Raw or aggregate
+                if($column[0][0]=="[{raw}]") {
+                    $part .= $column[0][1];
+                } else if ($column[0][0]=="COUNT" && $column[0][1]==1) {
                     $part .= "COUNT(1)";
                 } else {
                     $part .= $column[0][0]."(".$this->quoteIdentifier($column[0][1]).")";
                 }
             } else {
-                if (strpos($column[0], "[{raw}]")===0) {
-                    $part .= str_replace("[{raw}]", "", $column[0]);
-                } else {
-                    $part .= $this->quoteIdentifier($column[0]);
-                }
+                $part .= $this->quoteIdentifier($column[0]);
             }
             if (isset($column[1])) {
                 $part .= " AS ".$this->quoteIdentifier($column[1]);
