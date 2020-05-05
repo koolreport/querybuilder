@@ -51,12 +51,12 @@ class SQL
         }
         $dot = strpos($name, ".");
         if ($dot===false) {
-            return $this->identifierQuotes[0].$name.$this->identifierQuotes[0];
+            return $this->identifierQuotes[0].$name.$this->identifierQuotes[1];
         } else {
             $table = substr($name, 0, $dot);
             $column = str_replace($table.".", "", $name);
-            return $this->identifierQuotes[0].$table.$this->identifierQuotes[0]
-                    .".".$this->identifierQuotes[1].$column.$this->identifierQuotes[1];
+            return $this->identifierQuotes[0].$table.$this->identifierQuotes[1]
+                    .".".$this->identifierQuotes[0].$column.$this->identifierQuotes[1];
         }
     }
 
@@ -175,7 +175,7 @@ class SQL
                 $part .= $this->quoteIdentifier($column[0]);
             }
             if (isset($column[1])) {
-                $part .= " AS ".$this->identifierQuotes[1].$column[1].$this->identifierQuotes[1];
+                $part .= " AS ".$this->quoteIdentifier($column[1]);
             }
             array_push($array, $part);
         }
