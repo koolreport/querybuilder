@@ -783,18 +783,9 @@ class Query
     public function toArray($obj = null)
     {
         if (! isset($obj)) $obj = $this;
-        // return get_object_vars($this);
-        // if (! isset($this->level)) $this->level = 0;
-        // echo "level="; echo $this->level++; echo "<br>";
-        // if ($this->level > 10) return [];
-        // $obj = $this;
         $_arr = is_object($obj) ? get_object_vars($obj) : $obj;
         foreach ($_arr as $key => $val) {
-            // var_dump($val); echo "<br>";
-            // echo is_array($val) ? "$key is array <br>" : "$key is not array <br>";
-            // echo is_object($val) ? "$key is object <br>" : "$key is not object <br>";
             $recursive = ! empty($val) && (is_array($val) || is_object($val));
-            // echo $recursive ? "is recursive <br>" : "is not recursive <br>";
             $val = $recursive ? $this->toArray($val) : $val;
             $arr[$key] = $val;
         }

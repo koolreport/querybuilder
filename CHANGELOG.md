@@ -1,5 +1,9 @@
 # Change Log
 
+## Version 2.5.1
+
+1. Fix Query's rebuildSubQueries() method and make its toArray() recursive.
+
 ## Version 2.5.0
 
 1. Enhance the `selectRaw()`, `whereRaw()` and `orderByRaw()`
