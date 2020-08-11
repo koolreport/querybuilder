@@ -783,8 +783,8 @@ class Query
     public function toArray($obj = null)
     {
         if (! isset($obj)) $obj = $this;
-        $_arr = is_object($obj) ? get_object_vars($obj) : $obj;
-        foreach ($_arr as $key => $val) {
+        $arr = is_object($obj) ? get_object_vars($obj) : $obj;
+        foreach ($arr as $key => $val) {
             $recursive = ! empty($val) && (is_array($val) || is_object($val));
             $val = $recursive ? $this->toArray($val) : $val;
             $arr[$key] = $val;

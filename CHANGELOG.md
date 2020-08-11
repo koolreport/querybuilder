@@ -1,8 +1,13 @@
 # Change Log
 
+## New version (2.5.2)
+
+1. Fix the `toArray()` method
+
 ## Version 2.5.1
 
 1. Fix Query's rebuildSubQueries() method and make its toArray() recursive.
+
 
 ## Version 2.5.0
 
