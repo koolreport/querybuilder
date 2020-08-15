@@ -177,6 +177,8 @@ class Query
                 $this->where($params[0], "=", $params[1]);
                 break;
             case 3:
+            case 4:
+            case 5:
                 $this->andCondition();
                 $this->pushStandardCondition($params);
             break;

@@ -3,6 +3,7 @@
 ## New version (2.5.2)
 
 1. Fix the `toArray()` method
+2. Fix issue with `where()` method
 
 ## Version 2.5.1
 
