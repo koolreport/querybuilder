@@ -175,7 +175,12 @@ class Query
 
     public function whereCloseBracket()
     {
-        array_push($this->conditions, ")");
+        $lastcondition = end($this->conditions);
+        if ($lastcondition === "(") {
+            array_pop($this->conditions);
+        } else {
+            array_push($this->conditions, ")");
+        }
         return $this;
     }
 

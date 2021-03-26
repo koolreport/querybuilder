@@ -251,20 +251,24 @@ class SQL
         }
 
         if (count($this->query->conditions)>0) {
-            $sql.=" WHERE ".$this->getWhere($this->query->conditions);
+            $where = trim($this->getWhere($this->query->conditions));
+            if (!empty($where)) $sql.=" WHERE ".$where;
         }
 
         if (count($this->query->groups)>0) {
-            $sql.=" GROUP BY ".$this->getGroupBy($this->query->groups);
+            $groupBy = trim($this->getGroupBy($this->query->groups));
+            if (!empty($groupBy)) $sql.=" GROUP BY ".$groupBy;
         }
 
         if ($this->query->having) {
-            $sql.=" HAVING ".$this->getHaving($this->query->having);
+            $having = trim($this->getHaving($this->query->having));
+            if (!empty($having)) $sql.=" HAVING ".$having;
         }
 
 
         if (count($this->query->orders)>0) {
-            $sql.=" ORDER BY ".$this->getOrderBy($this->query->orders);
+            $orderBy = trim($this->getOrderBy($this->query->orders));
+            if (!empty($orderBy)) $sql.=" ORDER BY ".$orderBy;
         }
 
         if ($this->query->limit!==null) {
