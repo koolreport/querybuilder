@@ -2,8 +2,16 @@
 
 namespace koolreport\querybuilder;
 
+use \koolreport\core\Utility as Util;
+
 class Query
 {
+    protected static $instanceId = 0;
+
+    public $id;
+    public $paramCount = 0;
+    public $queryParams = [];
+
     public $type = "select"; //"update","delete","insert"
     public $tables;
     public $columns;
@@ -18,9 +26,13 @@ class Query
     public $unions;
     public $values;
     public $lock = null;
+    
+    protected $schemas;
 
     public function __construct()
     {
+        $this->id = "qb_" . ($this::$instanceId++);
+
         $this->tables = array();
         $this->columns = array();
         $this->conditions = array();
@@ -30,6 +42,42 @@ class Query
         $this->joins = array();
         $this->unions = array();
         $this->values = array();
+    }
+
+    public function setSchemas($schemas)
+    {
+        $this->schemas = $schemas;
+        // Util::prettyPrint($schemas);
+    }
+
+    public function getSchemas()
+    {
+        return $this->schemas;
+    }
+
+    public function isTableInSchemas($table)
+    {
+        if (!isset($this->schemas)) return true;
+        foreach ($this->schemas as $schema) {
+            $tableInfos = Util::get($schema, 'tables', []);
+            if (isset($tableInfos[$table])) return true;
+        }
+        return false;
+    }
+
+    public function isFieldInSchemas($field)
+    {
+        // echo "isFieldInSchemas field=$field<br>";
+        if (!isset($this->schemas)) return true;
+        foreach ($this->schemas as $schema) {
+            $tableInfos = Util::get($schema, 'tables', []);
+            foreach ($tableInfos as $table => $fieldInfos) {
+                foreach ($fieldInfos as $f => $fieldInfo) {
+                    if ($f === $field || "$table.$f" === $field) return true;
+                }
+            }
+        }
+        return false;
     }
 
     public function distinct()
@@ -42,13 +90,15 @@ class Query
     {
         $params = func_get_args();
         if (count($params) > 1) {
-            $this->tables = $params;
+            foreach ($params as $param) $this->from($param);
         } elseif (gettype($params[0]) == "string") {
-            $this->tables = $params;
+            if ($this->isTableInSchemas($params[0])) $this->tables = $params;
         } elseif (gettype($params[0]) == "array") {
             foreach ($params[0] as $key => $value) {
                 if (gettype($value) == "string") {
-                    array_push($this->tables, $value);
+                    if ($this->isTableInSchemas($params[0])) {
+                        array_push($this->tables, $value);
+                    }
                 } elseif (is_callable($value)) {
                     $query = new Query;
                     $value($query);
@@ -63,7 +113,9 @@ class Query
     {
         $params = func_get_args();
         foreach ($params as $columnName) {
-            array_push($this->columns, array($columnName));
+            if ($this->isFieldInSchemas($columnName)) {
+                array_push($this->columns, array($columnName));
+            }
         }
         return $this;
     }
@@ -108,6 +160,11 @@ class Query
             $params = array("1");
         }
         return $this->aggregate("COUNT", $params);
+    }
+
+    public function count_distinct()
+    {
+        return $this->aggregate("COUNT DISTINCT", func_get_args());
     }
 
     public function sum()
@@ -204,12 +261,30 @@ class Query
         return $this;
     }
 
+    public function isStandardConditionValid($params)
+    {
+        $field = $params[0];
+        $compareOperator = strtolower($params[1]);
+        // $value1 = Util::get($params, 2);
+        // $value2 = Util::get($params, 3);
+        if (!$this->isFieldInSchemas($field)) return false;
+        $compareOperators = array_flip([
+            "<", "<=", ">=", ">", "!=", "<>", 
+            "is", "is not", "between", "in", "not in", "like"
+        ]);
+        if (!isset($compareOperators[$compareOperator])) return false;
+        return true;
+    }
+
     protected function pushStandardCondition($params)
     {
         if ($params[2] === null && $params[1] === "=") {
             $params[1] = "IS";
         }
-        array_push($this->conditions, $params);
+        $field = $params[0];
+        if ($this->isFieldInSchemas($field)) {
+            array_push($this->conditions, $params);
+        }
     }
 
 
@@ -238,8 +313,10 @@ class Query
             case 3:
             case 4:
             case 5:
-                $this->andCondition();
-                $this->pushStandardCondition($params);
+                if ($this->isStandardConditionValid($params)) {
+                    $this->andCondition();
+                    $this->pushStandardCondition($params);
+                }
                 break;
         }
         return $this;
@@ -267,8 +344,10 @@ class Query
                 $this->orWhere($params[0], "=", $params[1]);
                 break;
             case 3:
-                $this->orCondition();
-                $this->pushStandardCondition($params);
+                if ($this->isStandardConditionValid($params)) {
+                    $this->orCondition();
+                    $this->pushStandardCondition($params);
+                }
                 break;
         }
         return $this;
@@ -347,6 +426,7 @@ class Query
     protected function whereFunction($name, $params)
     {
         $c = count($params);
+        if ($c > 0 && !$this->isFieldInSchemas($params[0])) return $this;
         if ($c == 1) {
             return $this->where("$name($params[0])", "=", date("Y-m-d"));
         } elseif ($c == 2) {
@@ -426,12 +506,22 @@ class Query
                 }
                 break;
             case 2:
-                $this->whereColumn($params[0], "=", $params[1]);
+                if (
+                    $this->isFieldInSchemas($params[0])
+                    && $this->isFieldInSchemas($params[1])
+                ) {
+                    $this->whereColumn($params[0], "=", $params[1]);
+                }
                 break;
             case 3:
-                $this->andCondition();
-                $params[2] = "[{colName}]" . $params[2];
-                array_push($this->conditions, $params);
+                if (
+                    $this->isFieldInSchemas($params[0])
+                    && $this->isFieldInSchemas($params[2])
+                ) {
+                    $this->andCondition();
+                    $params[2] = "[{colName}]" . $params[2];
+                    array_push($this->conditions, $params);
+                }
                 break;
         }
         return $this;
@@ -452,12 +542,22 @@ class Query
                 }
                 break;
             case 2:
-                $this->orWhereColumn($params[0], "=", $params[1]);
+                if (
+                    $this->isFieldInSchemas($params[0])
+                    && $this->isFieldInSchemas($params[1])
+                ) {
+                    $this->orWhereColumn($params[0], "=", $params[1]);
+                }
                 break;
             case 3:
-                $this->orCondition();
-                $params[2] = "[{colName}]" . $params[2];
-                array_push($this->conditions, $params);
+                if (
+                    $this->isFieldInSchemas($params[0])
+                    && $this->isFieldInSchemas($params[2])
+                ) {
+                    $this->orCondition();
+                    $params[2] = "[{colName}]" . $params[2];
+                    array_push($this->conditions, $params);
+                }
                 break;
         }
         return $this;
@@ -515,7 +615,10 @@ class Query
                     call_user_func_array(array($this, "orderBy"), $order);
                 }
             } else {
-                $this->orderBy($params[0], 'asc');
+                $field = $params[0];
+                if ($this->isFieldInSchemas($field)) {
+                    $this->orderBy($field, 'asc');
+                }
             }
         } elseif (count($params) > 1) {
             array_push($this->orders, $params);
@@ -544,7 +647,10 @@ class Query
     {
         $params = func_get_args();
         foreach ($params as $group) {
-            if (!in_array($group, $this->groups)) {
+            if (
+                !in_array($group, $this->groups)
+                && $this->isFieldInSchemas($group)
+            ) {
                 array_push($this->groups, $group);
             }
         }
@@ -609,13 +715,17 @@ class Query
     }
     public function offset($number)
     {
-        $this->offset = $number;
+        if (is_numeric($number)) {
+            $this->offset = $number;
+        }
         return $this;
     }
 
     public function limit($number)
     {
-        $this->limit = $number;
+        if (is_numeric($number)) {
+            $this->limit = $number;
+        }
         return $this;
     }
 
@@ -656,7 +766,9 @@ class Query
     //---------------//
     protected function allJoin($method, $params)
     {
-        $join = array($method, $params[0]);
+        $table = $params[0];
+        if (!$this->isTableInSchemas($table)) return $this;
+        $join = array($method, $table);
         array_splice($params, 0, 1);
         if (count($params) == 1 && is_callable($params[0])) {
             $query = new Query;
@@ -766,25 +878,39 @@ class Query
         return $this;
     }
     //------------------//
-    public function toSQL($quoteIdentifier = false)
+    public function toSQL($options = [])
     {
+        echo "options = "; Util::prettyPrint($options);
+        if (gettype($options) === 'boolean') $quoteIdentifier = false;
+        else $quoteIdentifier = Util::get($options, 'quoteIdentifier', false);
         $interpreter = new SQL($this, $quoteIdentifier);
-        return $interpreter->buildQuery();
+        return $interpreter->buildQuery($options);
     }
-    public function toMySQL($quoteIdentifier = false)
+    public function toMySQL($options = [])
     {
+        if (gettype($options) === 'boolean') $quoteIdentifier = false;
+        else $quoteIdentifier = Util::get($options, 'quoteIdentifier', false);
         $interpreter = new MySQL($this, $quoteIdentifier);
-        return $interpreter->buildQuery();
+        return $interpreter->buildQuery($options);
     }
-    public function toPostgreSQL($quoteIdentifier = false)
+    public function toPostgreSQL($options = [])
     {
+        if (gettype($options) === 'boolean') $quoteIdentifier = false;
+        else $quoteIdentifier = Util::get($options, 'quoteIdentifier', false);
         $interpreter = new PostgreSQL($this, $quoteIdentifier);
-        return $interpreter->buildQuery();
+        return $interpreter->buildQuery($options);
     }
-    public function toSQLServer($quoteIdentifier = false)
+    public function toSQLServer($options = [])
     {
+        if (gettype($options) === 'boolean') $quoteIdentifier = false;
+        else $quoteIdentifier = Util::get($options, 'quoteIdentifier', false);
         $interpreter = new SQLServer($this, $quoteIdentifier);
-        return $interpreter->buildQuery();
+        return $interpreter->buildQuery($options);
+    }
+
+    public function getQueryParams()
+    {
+        return $this->queryParams;
     }
 
     public function __toString()
