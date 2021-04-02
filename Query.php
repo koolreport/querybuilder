@@ -10,7 +10,7 @@ class Query
 
     public $id;
     public $paramCount = 0;
-    public $queryParams = [];
+    public $sqlParams = [];
 
     public $type = "select"; //"update","delete","insert"
     public $tables;
@@ -26,7 +26,7 @@ class Query
     public $unions;
     public $values;
     public $lock = null;
-    
+
     protected $schemas;
 
     public function __construct()
@@ -269,7 +269,7 @@ class Query
         // $value2 = Util::get($params, 3);
         if (!$this->isFieldInSchemas($field)) return false;
         $compareOperators = array_flip([
-            "<", "<=", ">=", ">", "!=", "<>", 
+            "<", "<=", ">=", ">", "!=", "<>",
             "is", "is not", "between", "in", "not in", "like"
         ]);
         if (!isset($compareOperators[$compareOperator])) return false;
@@ -880,7 +880,8 @@ class Query
     //------------------//
     public function toSQL($options = [])
     {
-        echo "options = "; Util::prettyPrint($options);
+        // echo "options = ";
+        // Util::prettyPrint($options);
         if (gettype($options) === 'boolean') $quoteIdentifier = false;
         else $quoteIdentifier = Util::get($options, 'quoteIdentifier', false);
         $interpreter = new SQL($this, $quoteIdentifier);
@@ -908,9 +909,9 @@ class Query
         return $interpreter->buildQuery($options);
     }
 
-    public function getQueryParams()
+    public function getSQLParams()
     {
-        return $this->queryParams;
+        return $this->sqlParams;
     }
 
     public function __toString()

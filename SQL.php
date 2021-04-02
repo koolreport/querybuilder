@@ -65,15 +65,15 @@ class SQL
 
     protected function getWhere($conditions, $options = [])
     {
-        $useQueryParam = Util::get($options, "useQueryParam", false); //"named parameter", "question mark"
+        $useSQLParams = Util::get($options, "useSQLParams", false); //"named parameter", "question mark"
         if (
-            $useQueryParam !== false
-            && $useQueryParam !== "named parameter"
-            && $useQueryParam !== "question mark"
+            $useSQLParams !== false
+            && $useSQLParams !== "name"
+            && $useSQLParams !== "question"
         ) {
-            $useQueryParam = "named parameter";
+            $useSQLParams = "name";
         }
-        // echo "useQueryParam=$useQueryParam<br>";
+        // echo "useSQLParams=$useSQLParams<br>";
         // var_dump($this->query); echo "<br>";
         $queryId = gettype($this->query) === 'object' ? $this->query->id : 0;
         $result = "";
@@ -101,17 +101,19 @@ class SQL
                         if (gettype($value) == "string" && strpos($value, "[{colName}]") === 0) {
                             $part = str_replace("{value}", str_replace("[{colName}]", "", $this->quoteIdentifier($value)), $part);
                         } else {
-                            if ($useQueryParam === 'named parameter') {
+                            // echo "operator=$operator<br>";
+                            if ($useSQLParams === 'name') {
                                 if (($operator === "IN" || $operator === "NOT IN")
                                     && gettype($value) === "array"
                                 ) {
+                                    // echo "in not in<br>";
                                     $valueLength = count($value);
                                     $paramNames = [];
                                     $paramCount = $this->query->paramCount++;
                                     for ($i = 0; $i < $valueLength; $i++) {
                                         $paramName = ":{$queryId}_param_{$paramCount}_$i";
                                         $paramNames[] = $paramName;
-                                        $this->query->queryParams[$paramName] = $value[$i];
+                                        $this->query->sqlParams[$paramName] = $value[$i];
                                     }
                                     $paramNames = implode(", ", $paramNames);
                                     $part = str_replace("{value}", "(" . $paramNames . ")", $part);
@@ -119,13 +121,15 @@ class SQL
                                     ($operator === "IS" || $operator === "IS NOT")
                                     && $value === null
                                 ) {
+                                    // echo "is null is not null<br>";
                                     $part = str_replace("{value}", $this->renderValue($value), $part);
-                                }  else {
+                                } else {
                                     $paramName = ":" . $queryId . "_param_" . ($this->query->paramCount++);
+                                    // echo "paramName=$paramName<br>";
                                     $part = str_replace("{value}", $paramName, $part);
-                                    $this->query->queryParams[$paramName] = $value;
+                                    $this->query->sqlParams[$paramName] = $value;
                                 }
-                            } else if ($useQueryParam === 'question mark') {
+                            } else if ($useSQLParams === 'question') {
                                 if (
                                     ($operator === "IN" || $operator === "NOT IN")
                                     && gettype($value) === "array"
@@ -136,7 +140,7 @@ class SQL
                                     for ($i = 0; $i < $valueLength; $i++) {
                                         $paramName = "?";
                                         $paramNames[] = $paramName;
-                                        $this->query->queryParams[] = $value[$i];
+                                        $this->query->sqlParams[] = $value[$i];
                                     }
                                     $paramNames = implode(", ", $paramNames);
                                     $part = str_replace("{value}", "(" . $paramNames . ")", $part);
@@ -147,7 +151,7 @@ class SQL
                                     $part = str_replace("{value}", $this->renderValue($value), $part);
                                 } else {
                                     $part = str_replace("{value}", "?", $part);
-                                    $this->query->queryParams[] = $value;
+                                    $this->query->sqlParams[] = $value;
                                 }
                             } else {
                                 $part = str_replace("{value}", $this->renderValue($value), $part);
@@ -159,7 +163,7 @@ class SQL
             } elseif (gettype($condition) == "string") {
                 $result .= " $condition ";
             } elseif (is_a($condition, 'koolreport\querybuilder\Query')) {
-                $result .= "(" . $this->getWhere($condition->conditions) . ")";
+                $result .= "(" . $this->getWhere($condition->conditions, $options) . ")";
             }
         }
         return $result;
@@ -207,9 +211,9 @@ class SQL
         return implode(", ", $array);
     }
 
-    protected function getHaving($having)
+    protected function getHaving($having, $options = [])
     {
-        return $this->getWhere($having->conditions);
+        return $this->getWhere($having->conditions, $options);
     }
 
     protected function getJoin($joins)
@@ -333,7 +337,7 @@ class SQL
         }
 
         if ($this->query->having) {
-            $having = trim($this->getHaving($this->query->having));
+            $having = trim($this->getHaving($this->query->having, $options));
             if (!empty($having)) $sql .= " HAVING " . $having;
         }
 
@@ -418,7 +422,7 @@ class SQL
     public function buildQuery($options = [])
     {
         $this->query->paramCount = 0;
-        $this->query->queryParams = [];
+        $this->query->sqlParams = [];
         switch ($this->query->type) {
             case "select":
                 return $this->buildSelectQuery($options);

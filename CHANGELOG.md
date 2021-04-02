@@ -1,5 +1,10 @@
 # Change Log
 
+## Version 3.0.0
+
+1. Add whereOpenBracket(), whereCloseBracket() methods
+2. Add option to build named and question mark parameter query and its parameter values to improve security
+
 ## Version 2.5.3
 
 1. Fix the `toArray()` method
