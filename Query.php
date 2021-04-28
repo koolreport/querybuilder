@@ -73,7 +73,9 @@ class Query
             $tableInfos = Util::get($schema, 'tables', []);
             foreach ($tableInfos as $table => $fieldInfos) {
                 foreach ($fieldInfos as $f => $fieldInfo) {
-                    if ($f === $field || "$table.$f" === $field) return true;
+					$exp = Util::get($fieldInfo, "expression", $f);
+                    if ($f === $field || "$table.$f" === $field
+						|| $exp = $field) return true;
                 }
             }
         }
@@ -264,13 +266,14 @@ class Query
     public function isStandardConditionValid($params)
     {
         $field = $params[0];
-        $compareOperator = strtolower($params[1]);
+        $compareOperator = strtolower(trim($params[1]));
         // $value1 = Util::get($params, 2);
         // $value2 = Util::get($params, 3);
         if (!$this->isFieldInSchemas($field)) return false;
         $compareOperators = array_flip([
-            "<", "<=", ">=", ">", "!=", "<>",
-            "is", "is not", "between", "in", "not in", "like"
+            "=", "<", "<=", ">=", ">", "!=", "<>",
+            "is", "is not", "between", "not between", 
+            "in", "not in", "like", "not like"
         ]);
         if (!isset($compareOperators[$compareOperator])) return false;
         return true;
@@ -316,6 +319,8 @@ class Query
                 if ($this->isStandardConditionValid($params)) {
                     $this->andCondition();
                     $this->pushStandardCondition($params);
+                } else {
+                    // echo "isStandardConditionValid = false<br>";
                 }
                 break;
         }
@@ -597,7 +602,7 @@ class Query
         array_push($this->conditions, DB::raw($raw, $params));
         return $this;
     }
-    public function orWhereRaw($raw)
+    public function orWhereRaw($raw, $params = null)
     {
         $this->orCondition();
         array_push($this->conditions, DB::raw($raw, $params));
