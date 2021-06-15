@@ -6,7 +6,28 @@ class SQLServer extends SQL
 {
     protected $identifierQuotes=array('"','"');//For table name and column name
 
-    protected function buildSelectQuery()
+
+    protected function buildProcedureQuery($options = [])
+    {
+        $sql = "";
+        foreach($this->query->procedures as $proc) {
+            $statement = "EXEC ".$proc[0]." @params ;";
+            $params = [];
+            foreach($proc[1] as $value) {
+                if(gettype($value)==="string") {
+                    array_push($params,$this->coverValue($this->escapeString($value)));
+                } else {
+                    array_push($params,$value);
+                }
+            }
+            $statement = str_replace("@params",implode(",",$params),$statement);
+            $sql.=$statement;
+        }
+        return $sql;
+    }
+
+
+    protected function buildSelectQuery($options = [])
     {
         $sql = "SELECT ";
         if ($this->query->distinct) {
