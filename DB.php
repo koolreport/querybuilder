@@ -37,5 +37,10 @@ class DB
     
         return str_replace($search, $replace, $string);
     }
-    
+
+    static function call($procedureName,$params=array()) {
+        $query = new Query();
+        $query->call($procedureName,$params);
+        return $query;
+    }
 }

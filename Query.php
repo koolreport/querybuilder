@@ -4,7 +4,7 @@ namespace koolreport\querybuilder;
 
 class Query
 {
-    public $type = "select";//"update","delete","insert"
+    public $type = "select";//"update","delete","insert","procedure"
     public $tables;
     public $columns;
     public $conditions;
@@ -18,6 +18,7 @@ class Query
     public $unions;
     public $values;
     public $lock = null;
+    public $procedures;
 
     public function __construct()
     {
@@ -30,6 +31,15 @@ class Query
         $this->joins = array();
         $this->unions = array();
         $this->values = array();
+        $this->procedures = array();
+    }
+
+    public function call($procedureName,$params=array()) {
+        $this->type = "procedure";
+        array_push($this->procedures,array(
+            $procedureName,
+            $params
+        ));
     }
 
     public function distinct()

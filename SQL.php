@@ -338,6 +338,24 @@ class SQL
         return $sql;
     }
 
+    public function buildProcedureQuery()
+    {
+        $sql = "";
+        foreach($this->query->procedures as $proc) {
+            $statement = "CALL ".$proc[0]."(@params);";
+            $params = [];
+            foreach($proc[1] as $value) {
+                if(gettype($value)==="string") {
+                    array_push($params,$this->coverValue($this->escapeString($value)));
+                } else {
+                    array_push($params,$value);
+                }
+            }
+            $statement = str_replace("@params",implode(",",$params),$statement);
+            $sql.=$statement;
+        }
+        return $sql;
+    }
 
     public function buildQuery()
     {
@@ -350,6 +368,8 @@ class SQL
                 return $this->buildInsertQuery();
             case "delete":
                 return $this->buildDeleteQuery();
+            case "procedure":
+                return $this->buildProcedureQuery();
         }
         return "Unknown query type";
     }
