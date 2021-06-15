@@ -1,8 +1,11 @@
 # Change Log
 
-## New version
+## Version 3.0.0
 
-1. Added: Ability to call procedure with parameters
+1. Add whereOpenBracket(), whereCloseBracket() methods
+2. Add option to build named and question mark parameter query and its parameter values to improve security
+3. Add schemas to Query to check select validity
+4. Add ability to call procedure with parameters
 
 ## Version 2.5.3
 

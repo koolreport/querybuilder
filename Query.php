@@ -2,9 +2,17 @@
 
 namespace koolreport\querybuilder;
 
+use \koolreport\core\Utility as Util;
+
 class Query
 {
-    public $type = "select";//"update","delete","insert","procedure"
+    protected static $instanceId = 0;
+
+    public $id;
+    public $paramCount = 0;
+    public $sqlParams = [];
+
+    public $type = "select"; //"update","delete","insert","procedure"
     public $tables;
     public $columns;
     public $conditions;
@@ -20,8 +28,12 @@ class Query
     public $lock = null;
     public $procedures;
 
+    protected $schemas;
+
     public function __construct()
     {
+        $this->id = "qb_" . ($this::$instanceId++);
+
         $this->tables = array();
         $this->columns = array();
         $this->conditions = array();
@@ -42,6 +54,44 @@ class Query
         ));
     }
 
+    public function setSchemas($schemas)
+    {
+        $this->schemas = $schemas;
+        // Util::prettyPrint($schemas);
+    }
+
+    public function getSchemas()
+    {
+        return $this->schemas;
+    }
+
+    public function isTableInSchemas($table)
+    {
+        if (!isset($this->schemas)) return true;
+        foreach ($this->schemas as $schema) {
+            $tableInfos = Util::get($schema, 'tables', []);
+            if (isset($tableInfos[$table])) return true;
+        }
+        return false;
+    }
+
+    public function isFieldInSchemas($field)
+    {
+        // echo "isFieldInSchemas field=$field<br>";
+        if (!isset($this->schemas)) return true;
+        foreach ($this->schemas as $schema) {
+            $tableInfos = Util::get($schema, 'tables', []);
+            foreach ($tableInfos as $table => $fieldInfos) {
+                foreach ($fieldInfos as $f => $fieldInfo) {
+					$exp = Util::get($fieldInfo, "expression", $f);
+                    if ($f === $field || "$table.$f" === $field
+						|| $exp = $field) return true;
+                }
+            }
+        }
+        return false;
+    }
+
     public function distinct()
     {
         $this->distinct = true;
@@ -51,18 +101,20 @@ class Query
     public function from()
     {
         $params = func_get_args();
-        if (count($params)>1) {
-            $this->tables = $params;
-        } elseif (gettype($params[0])=="string") {
-            $this->tables = $params;
-        } elseif (gettype($params[0])=="array") {
-            foreach ($params[0] as $key=>$value) {
-                if (gettype($value)=="string") {
-                    array_push($this->tables, $value);
+        if (count($params) > 1) {
+            foreach ($params as $param) $this->from($param);
+        } elseif (gettype($params[0]) == "string") {
+            if ($this->isTableInSchemas($params[0])) $this->tables = $params;
+        } elseif (gettype($params[0]) == "array") {
+            foreach ($params[0] as $key => $value) {
+                if (gettype($value) == "string") {
+                    if ($this->isTableInSchemas($params[0])) {
+                        array_push($this->tables, $value);
+                    }
                 } elseif (is_callable($value)) {
                     $query = new Query;
                     $value($query);
-                    array_push($this->tables, array($query,$key));
+                    array_push($this->tables, array($query, $key));
                 }
             }
         }
@@ -73,11 +125,13 @@ class Query
     {
         $params = func_get_args();
         foreach ($params as $columnName) {
-            array_push($this->columns, array($columnName));
+            if ($this->isFieldInSchemas($columnName)) {
+                array_push($this->columns, array($columnName));
+            }
         }
         return $this;
     }
-    public function selectRaw($text, $params=array())
+    public function selectRaw($text, $params = array())
     {
         array_push($this->columns, array(DB::raw($text, $params)));
         return $this;
@@ -85,10 +139,10 @@ class Query
 
     public function addSelect()
     {
-        call_user_func_array(array($this,"select"), func_get_args());
+        call_user_func_array(array($this, "select"), func_get_args());
         return $this;
     }
-    public function addSelectRaw($text, $params=array())
+    public function addSelectRaw($text, $params = array())
     {
         return $this->selectRaw($text, $params);
     }
@@ -96,15 +150,15 @@ class Query
     protected function aggregate($method, $params)
     {
         foreach ($params as $name) {
-            array_push($this->columns, array(array($method,$name)));
+            array_push($this->columns, array(array($method, $name)));
         }
         return $this;
     }
 
     public function alias($name)
     {
-        $index = count($this->columns)-1;
-        if ($index>-1) {
+        $index = count($this->columns) - 1;
+        if ($index > -1) {
             array_push($this->columns[$index], $name);
         }
         return $this;
@@ -114,10 +168,15 @@ class Query
     public function count()
     {
         $params = func_get_args();
-        if (count($params)==0) {
+        if (count($params) == 0) {
             $params = array("1");
         }
         return $this->aggregate("COUNT", $params);
+    }
+
+    public function count_distinct()
+    {
+        return $this->aggregate("COUNT DISTINCT", func_get_args());
     }
 
     public function sum()
@@ -137,30 +196,108 @@ class Query
         return $this->aggregate("MIN", func_get_args());
     }
 
-
-
     protected function andCondition()
     {
-        if (count($this->conditions)>0) {
-            array_push($this->conditions, "AND");
+        // if (count($this->conditions) > 0) {
+        //     array_push($this->conditions, "AND");
+        //     return $this;
+        // }
+        for ($i = count($this->conditions) - 1; $i >= 0; $i--) {
+            $condition = $this->conditions[$i];
+            if ($condition !== "(") break;
         }
+        // echo "before condition = ";
+        // \koolreport\core\Utility::prettyPrint($this->conditions);
+        // echo "i=$i<br>";
+        if ($i > -1) array_splice($this->conditions, $i + 1, 0, "AND");
+        // echo "after condition = ";
+        // \koolreport\core\Utility::prettyPrint($this->conditions);
+        // echo "<br><br>";
         return $this;
     }
 
     protected function orCondition()
     {
-        if (count($this->conditions)>0) {
-            array_push($this->conditions, "OR");
+        // if (count($this->conditions) > 0) {
+        //     array_push($this->conditions, "OR");
+        //     return $this;
+        // }
+        for ($i = count($this->conditions) - 1; $i >= 0; $i--) {
+            $condition = $this->conditions[$i];
+            if ($condition !== "(") break;
+        }
+        // echo "before condition = ";
+        // \koolreport\core\Utility::prettyPrint($this->conditions);
+        // echo "i=$i<br>";
+        if ($i > -1) array_splice($this->conditions, $i + 1, 0, "OR");
+        // echo "after condition = ";
+        // \koolreport\core\Utility::prettyPrint($this->conditions);
+        // echo "<br><br>";
+        return $this;
+    }
+
+    public function whereOpenBracket()
+    {
+        array_push($this->conditions, "(");
+        return $this;
+    }
+
+    public function whereCloseBracket()
+    {
+        $lastcondition = end($this->conditions);
+        if ($lastcondition === "(") {
+            array_pop($this->conditions);
+        } else {
+            array_push($this->conditions, ")");
         }
         return $this;
     }
 
+    public function havingOpenBracket()
+    {
+        $params = func_get_args();
+        if (!$this->having) {
+            $this->having = new Query;
+        }
+        call_user_func_array(array($this->having, "whereOpenBracket"), $params);
+        return $this;
+    }
+
+    public function havingCloseBracket()
+    {
+        $params = func_get_args();
+        if (!$this->having) {
+            $this->having = new Query;
+        }
+        call_user_func_array(array($this->having, "whereCloseBracket"), $params);
+        return $this;
+    }
+
+    public function isStandardConditionValid($params)
+    {
+        $field = $params[0];
+        $compareOperator = strtolower(trim($params[1]));
+        // $value1 = Util::get($params, 2);
+        // $value2 = Util::get($params, 3);
+        if (!$this->isFieldInSchemas($field)) return false;
+        $compareOperators = array_flip([
+            "=", "<", "<=", ">=", ">", "!=", "<>",
+            "is", "is not", "between", "not between", 
+            "in", "not in", "like", "not like"
+        ]);
+        if (!isset($compareOperators[$compareOperator])) return false;
+        return true;
+    }
+
     protected function pushStandardCondition($params)
     {
-        if ($params[2]===null && $params[1]==="=") {
+        if ($params[2] === null && $params[1] === "=") {
             $params[1] = "IS";
         }
-        array_push($this->conditions, $params);
+        $field = $params[0];
+        if ($this->isFieldInSchemas($field)) {
+            array_push($this->conditions, $params);
+        }
     }
 
 
@@ -169,10 +306,10 @@ class Query
         $params = func_get_args();
         switch (count($params)) {
             case 1:
-                if (gettype($params[0])=="array") {
+                if (gettype($params[0]) == "array") {
                     $query = new Query;
                     foreach ($params[0] as $where) {
-                        call_user_func_array(array($query,"where"), $where);
+                        call_user_func_array(array($query, "where"), $where);
                     }
                     $this->andCondition();
                     array_push($this->conditions, $query);
@@ -182,16 +319,20 @@ class Query
                     $this->andCondition();
                     array_push($this->conditions, $query);
                 }
-            break;
+                break;
             case 2:
                 $this->where($params[0], "=", $params[1]);
                 break;
             case 3:
             case 4:
             case 5:
-                $this->andCondition();
-                $this->pushStandardCondition($params);
-            break;
+                if ($this->isStandardConditionValid($params)) {
+                    $this->andCondition();
+                    $this->pushStandardCondition($params);
+                } else {
+                    // echo "isStandardConditionValid = false<br>";
+                }
+                break;
         }
         return $this;
     }
@@ -200,10 +341,10 @@ class Query
         $params = func_get_args();
         switch (count($params)) {
             case 1:
-                if (gettype($params[0])=="array") {
+                if (gettype($params[0]) == "array") {
                     $query = new Query;
                     foreach ($params[0] as $where) {
-                        call_user_func_array(array($query,"where"), $where);
+                        call_user_func_array(array($query, "where"), $where);
                     }
                     $this->orCondition();
                     array_push($this->conditions, $query);
@@ -213,14 +354,16 @@ class Query
                     $this->orCondition();
                     array_push($this->conditions, $query);
                 }
-            break;
+                break;
             case 2:
                 $this->orWhere($params[0], "=", $params[1]);
-            break;
+                break;
             case 3:
-                $this->orCondition();
-                $this->pushStandardCondition($params);
-            break;
+                if ($this->isStandardConditionValid($params)) {
+                    $this->orCondition();
+                    $this->pushStandardCondition($params);
+                }
+                break;
         }
         return $this;
     }
@@ -265,30 +408,30 @@ class Query
     public function whereBetween($name, $array)
     {
         return $this->where(array(
-            array($name,">=",$array[0]),
-            array($name,"<=",$array[1])
+            array($name, ">=", $array[0]),
+            array($name, "<=", $array[1])
         ));
     }
     public function whereNotBetween($name, $array)
     {
-        $this->where(function ($query) use ($name,$array) {
+        $this->where(function ($query) use ($name, $array) {
             $query->where($name, "<", $array[0])
-            ->orWhere($name, ">", $array[1]);
+                ->orWhere($name, ">", $array[1]);
         });
         return $this;
     }
     public function orWhereBetween($name, $array)
     {
         return $this->orWhere(array(
-            array($name,">=",$array[0]),
-            array($name,"<=",$array[1])
+            array($name, ">=", $array[0]),
+            array($name, "<=", $array[1])
         ));
     }
     public function orWhereNotBetween($name, $array)
     {
-        $this->orWhere(function ($query) use ($name,$array) {
+        $this->orWhere(function ($query) use ($name, $array) {
             $query->where($name, "<", $array[0])
-            ->orWhere($name, ">", $array[1]);
+                ->orWhere($name, ">", $array[1]);
         });
         return $this;
     }
@@ -298,11 +441,12 @@ class Query
     protected function whereFunction($name, $params)
     {
         $c = count($params);
-        if ($c==1) {
+        if ($c > 0 && !$this->isFieldInSchemas($params[0])) return $this;
+        if ($c == 1) {
             return $this->where("$name($params[0])", "=", date("Y-m-d"));
-        } elseif ($c==2) {
+        } elseif ($c == 2) {
             return $this->where("$name($params[0])", "=", $params[1]);
-        } elseif ($c>2) {
+        } elseif ($c > 2) {
             return $this->where("$name($params[0])", $params[1], $params[2]);
         }
         return $this;
@@ -310,11 +454,11 @@ class Query
     protected function orWhereFunction($name, $params)
     {
         $c = count($params);
-        if ($c==1) {
+        if ($c == 1) {
             return $this->orWhere("$name($params[0])", "=", date("Y-m-d"));
-        } elseif ($c==2) {
+        } elseif ($c == 2) {
             return $this->orWhere("$name($params[0])", "=", $params[1]);
-        } elseif ($c>2) {
+        } elseif ($c > 2) {
             return $this->orWhere("$name($params[0])", $params[1], $params[2]);
         }
         return $this;
@@ -367,23 +511,33 @@ class Query
         $params = func_get_args();
         switch (count($params)) {
             case 1:
-                if (gettype($params[0])=="array") {
+                if (gettype($params[0]) == "array") {
                     $query = new Query;
                     foreach ($params[0] as $where) {
-                        call_user_func_array(array($query,"whereColumn"), $where);
+                        call_user_func_array(array($query, "whereColumn"), $where);
                     }
                     $this->andCondition();
                     array_push($this->conditions, $query);
                 }
-            break;
+                break;
             case 2:
-                $this->whereColumn($params[0], "=", $params[1]);
-            break;
+                if (
+                    $this->isFieldInSchemas($params[0])
+                    && $this->isFieldInSchemas($params[1])
+                ) {
+                    $this->whereColumn($params[0], "=", $params[1]);
+                }
+                break;
             case 3:
-                $this->andCondition();
-                $params[2] = "[{colName}]".$params[2];
-                array_push($this->conditions, $params);
-            break;
+                if (
+                    $this->isFieldInSchemas($params[0])
+                    && $this->isFieldInSchemas($params[2])
+                ) {
+                    $this->andCondition();
+                    $params[2] = "[{colName}]" . $params[2];
+                    array_push($this->conditions, $params);
+                }
+                break;
         }
         return $this;
     }
@@ -393,27 +547,37 @@ class Query
         $params = func_get_args();
         switch (count($params)) {
             case 1:
-                if (gettype($params[0])=="array") {
+                if (gettype($params[0]) == "array") {
                     $query = new Query;
                     foreach ($params[0] as $where) {
-                        call_user_func_array(array($query,"orWhereColumn"), $where);
+                        call_user_func_array(array($query, "orWhereColumn"), $where);
                     }
                     $this->orCondition();
                     array_push($this->conditions, $query);
                 }
-            break;
+                break;
             case 2:
-                $this->orWhereColumn($params[0], "=", $params[1]);
-            break;
+                if (
+                    $this->isFieldInSchemas($params[0])
+                    && $this->isFieldInSchemas($params[1])
+                ) {
+                    $this->orWhereColumn($params[0], "=", $params[1]);
+                }
+                break;
             case 3:
-                $this->orCondition();
-                $params[2] = "[{colName}]".$params[2];
-                array_push($this->conditions, $params);
-            break;
+                if (
+                    $this->isFieldInSchemas($params[0])
+                    && $this->isFieldInSchemas($params[2])
+                ) {
+                    $this->orCondition();
+                    $params[2] = "[{colName}]" . $params[2];
+                    array_push($this->conditions, $params);
+                }
+                break;
         }
         return $this;
     }
-    
+
 
     //Exists
     public function whereExists($table)
@@ -422,7 +586,7 @@ class Query
             $query = new Query;
             $table($query);
             $this->andCondition();
-            array_push($this->conditions, array("[{exists}]",$query));
+            array_push($this->conditions, array("[{exists}]", $query));
         } else {
             throw new \Exception("whereExists() required function as parameter");
         }
@@ -434,7 +598,7 @@ class Query
             $query = new Query;
             $table($query);
             $this->orCondition();
-            array_push($this->conditions, array("[{exists}]",$query));
+            array_push($this->conditions, array("[{exists}]", $query));
         } else {
             throw new \Exception("whereExists() required function as parameter");
         }
@@ -442,50 +606,53 @@ class Query
     }
 
     //Raw
-    public function whereRaw($raw, $params=null)
+    public function whereRaw($raw, $params = null)
     {
         $this->andCondition();
         array_push($this->conditions, DB::raw($raw, $params));
         return $this;
     }
-    public function orWhereRaw($raw)
+    public function orWhereRaw($raw, $params = null)
     {
         $this->orCondition();
         array_push($this->conditions, DB::raw($raw, $params));
         return $this;
     }
-    
+
 
     //------------------//
     public function orderBy()
     {
         $params = func_get_args();
-        if (count($params)==1) {
-            if (gettype($params[0])=="array") {
+        if (count($params) == 1) {
+            if (gettype($params[0]) == "array") {
                 foreach ($params[0] as $order) {
-                    call_user_func_array(array($this,"orderBy"), $order);
+                    call_user_func_array(array($this, "orderBy"), $order);
                 }
             } else {
-                $this->orderBy($params[0], 'asc');
+                $field = $params[0];
+                if ($this->isFieldInSchemas($field)) {
+                    $this->orderBy($field, 'asc');
+                }
             }
-        } elseif (count($params)>1) {
+        } elseif (count($params) > 1) {
             array_push($this->orders, $params);
         }
         return $this;
     }
 
-    public function orderByRaw($raw, $params=null)
+    public function orderByRaw($raw, $params = null)
     {
         array_push($this->orders, DB::raw($raw, $params));
         return $this;
     }
 
-    public function latest($name='created_at')
+    public function latest($name = 'created_at')
     {
         return $this->orderBy($name, 'desc');
     }
 
-    public function oldest($name='created_at')
+    public function oldest($name = 'created_at')
     {
         return $this->orderBy($name, 'asc');
     }
@@ -495,7 +662,10 @@ class Query
     {
         $params = func_get_args();
         foreach ($params as $group) {
-            if (!in_array($group, $this->groups)) {
+            if (
+                !in_array($group, $this->groups)
+                && $this->isFieldInSchemas($group)
+            ) {
                 array_push($this->groups, $group);
             }
         }
@@ -506,8 +676,8 @@ class Query
     {
         $params = func_get_args();
         foreach ($params as $group) {
-            if (!in_array("[{raw}]".$group, $this->groups)) {
-                array_push($this->groups, "[{raw}]".$group);
+            if (!in_array("[{raw}]" . $group, $this->groups)) {
+                array_push($this->groups, "[{raw}]" . $group);
             }
         }
         return $this;
@@ -520,7 +690,7 @@ class Query
         if (!$this->having) {
             $this->having = new Query;
         }
-        call_user_func_array(array($this->having,"where"), $params);
+        call_user_func_array(array($this->having, "where"), $params);
         return $this;
     }
 
@@ -531,11 +701,11 @@ class Query
             $this->having = new Query;
         }
 
-        call_user_func_array(array($this->having,"orWhere"), $params);
+        call_user_func_array(array($this->having, "orWhere"), $params);
         return $this;
     }
 
-    public function havingRaw($raw, $params=null)
+    public function havingRaw($raw, $params = null)
     {
         if (!$this->having) {
             $this->having = new Query;
@@ -544,7 +714,7 @@ class Query
         return $this;
     }
 
-    public function orHavingRaw($raw, $params=null)
+    public function orHavingRaw($raw, $params = null)
     {
         if (!$this->having) {
             $this->having = new Query;
@@ -560,13 +730,17 @@ class Query
     }
     public function offset($number)
     {
-        $this->offset = $number;
+        if (is_numeric($number)) {
+            $this->offset = $number;
+        }
         return $this;
     }
 
     public function limit($number)
     {
-        $this->limit = $number;
+        if (is_numeric($number)) {
+            $this->limit = $number;
+        }
         return $this;
     }
 
@@ -582,7 +756,7 @@ class Query
     }
 
     //--------------//
-    public function when($condition, $trueExecution, $falseExecution=null)
+    public function when($condition, $trueExecution, $falseExecution = null)
     {
         if ($condition) {
             if (is_callable($trueExecution)) {
@@ -607,15 +781,17 @@ class Query
     //---------------//
     protected function allJoin($method, $params)
     {
-        $join = array($method,$params[0]);
+        $table = $params[0];
+        if (!$this->isTableInSchemas($table)) return $this;
+        $join = array($method, $table);
         array_splice($params, 0, 1);
-        if (count($params)==1 && is_callable($params[0])) {
+        if (count($params) == 1 && is_callable($params[0])) {
             $query = new Query;
             $params[0]($query);
             array_push($join, $query);
-        } elseif (count($params)>1) {
+        } elseif (count($params) > 1) {
             $query = new Query;
-            call_user_func_array(array($query,"on"), $params);
+            call_user_func_array(array($query, "on"), $params);
             array_push($join, $query);
         }
         array_push($this->joins, $join);
@@ -623,12 +799,12 @@ class Query
     }
     public function on()
     {
-        call_user_func_array(array($this,"whereColumn"), func_get_args());
+        call_user_func_array(array($this, "whereColumn"), func_get_args());
         return $this;
     }
     public function orOn()
     {
-        call_user_func_array(array($this,"orWhereColumn"), func_get_args());
+        call_user_func_array(array($this, "orWhereColumn"), func_get_args());
         return $this;
     }
 
@@ -678,20 +854,20 @@ class Query
         return $this;
     }
 
-    public function decrement($name, $value=1)
+    public function decrement($name, $value = 1)
     {
         $this->type = "update";
-        $this->values[$name] = array($name,"-",$value);
+        $this->values[$name] = array($name, "-", $value);
         return $this;
     }
 
-    public function increment($name, $value=1)
+    public function increment($name, $value = 1)
     {
         $this->type = "update";
-        $this->values[$name] = array($name,"+",$value);
+        $this->values[$name] = array($name, "+", $value);
         return $this;
     }
-    
+
     public function delete()
     {
         $this->type = "delete";
@@ -717,25 +893,40 @@ class Query
         return $this;
     }
     //------------------//
-    public function toSQL($quoteIdentifier=false)
+    public function toSQL($options = [])
     {
+        // echo "options = ";
+        // Util::prettyPrint($options);
+        if (gettype($options) === 'boolean') $quoteIdentifier = false;
+        else $quoteIdentifier = Util::get($options, 'quoteIdentifier', false);
         $interpreter = new SQL($this, $quoteIdentifier);
-        return $interpreter->buildQuery();
+        return $interpreter->buildQuery($options);
     }
-    public function toMySQL($quoteIdentifier=false)
+    public function toMySQL($options = [])
     {
+        if (gettype($options) === 'boolean') $quoteIdentifier = false;
+        else $quoteIdentifier = Util::get($options, 'quoteIdentifier', false);
         $interpreter = new MySQL($this, $quoteIdentifier);
-        return $interpreter->buildQuery();
+        return $interpreter->buildQuery($options);
     }
-    public function toPostgreSQL($quoteIdentifier=false)
+    public function toPostgreSQL($options = [])
     {
+        if (gettype($options) === 'boolean') $quoteIdentifier = false;
+        else $quoteIdentifier = Util::get($options, 'quoteIdentifier', false);
         $interpreter = new PostgreSQL($this, $quoteIdentifier);
-        return $interpreter->buildQuery();
+        return $interpreter->buildQuery($options);
     }
-    public function toSQLServer($quoteIdentifier=false)
+    public function toSQLServer($options = [])
     {
+        if (gettype($options) === 'boolean') $quoteIdentifier = false;
+        else $quoteIdentifier = Util::get($options, 'quoteIdentifier', false);
         $interpreter = new SQLServer($this, $quoteIdentifier);
-        return $interpreter->buildQuery();
+        return $interpreter->buildQuery($options);
+    }
+
+    public function getSQLParams()
+    {
+        return $this->sqlParams;
     }
 
     public function __toString()
@@ -750,15 +941,15 @@ class Query
      */
     protected function rebuildSubQueries($arr)
     {
-        if(!gettype($arr)=="array") {
+        if (!gettype($arr) == "array") {
             return $arr;
         }
 
-        foreach($arr as $key=>$value)
-        {
-            if( gettype($value)=="array"){
+        foreach ($arr as $key => $value) {
+            if (gettype($value) == "array") {
 
-                if ( isset($value["type"])
+                if (
+                    isset($value["type"])
                     && isset($value["tables"])
                     && isset($value["columns"])
                     && isset($value["conditions"])
@@ -777,10 +968,10 @@ class Query
 
     public function fill($arr)
     {
-        if ($arr!==null) {
+        if ($arr !== null) {
             $arr = $this->rebuildSubQueries($arr);
-            foreach ($arr as $key=>$value) {
-                    $this->$key = $value;
+            foreach ($arr as $key => $value) {
+                $this->$key = $value;
             }
         }
     }
@@ -794,10 +985,10 @@ class Query
 
     public function toArray($obj = null)
     {
-        if (! isset($obj)) $obj = $this;
+        if (!isset($obj)) $obj = $this;
         $arr = is_object($obj) ? get_object_vars($obj) : $obj;
         foreach ($arr as $key => $val) {
-            $recursive = ! empty($val) && (is_array($val) || is_object($val));
+            $recursive = !empty($val) && (is_array($val) || is_object($val));
             $val = $recursive ? $this->toArray($val) : $val;
             $arr[$key] = $val;
         }

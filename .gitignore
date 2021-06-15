@@ -2,6 +2,7 @@
 vendor
 
 # Other files and folders
+*.zip
 
 # Executables
 *.exe
