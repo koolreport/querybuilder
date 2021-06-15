@@ -1,5 +1,9 @@
 # Change Log
 
+## New version
+
+1. Added: Ability to call procedure with parameters
+
 ## Version 2.5.3
 
 1. Fix the `toArray()` method
