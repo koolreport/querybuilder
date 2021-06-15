@@ -52,6 +52,7 @@ class Query
             $procedureName,
             $params
         ));
+        return $this;
     }
 
     public function setSchemas($schemas)

@@ -418,7 +418,7 @@ class SQL
         return $sql;
     }
 
-    public function buildProcedureQuery()
+    public function buildProcedureQuery($options = [])
     {
         $sql = "";
         foreach($this->query->procedures as $proc) {
