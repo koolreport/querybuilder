@@ -903,6 +903,14 @@ class Query
         $interpreter = new SQL($this, $quoteIdentifier);
         return $interpreter->buildQuery($options);
     }
+    public function toOracle($options = [])
+    {
+        if (gettype($options) === 'boolean') $quoteIdentifier = false;
+        else $quoteIdentifier = Util::get($options, 'quoteIdentifier', false);
+        $interpreter = new Oracle($this, $quoteIdentifier);
+        return $interpreter->buildQuery($options);
+    }
+
     public function toMySQL($options = [])
     {
         if (gettype($options) === 'boolean') $quoteIdentifier = false;
@@ -910,6 +918,7 @@ class Query
         $interpreter = new MySQL($this, $quoteIdentifier);
         return $interpreter->buildQuery($options);
     }
+
     public function toPostgreSQL($options = [])
     {
         if (gettype($options) === 'boolean') $quoteIdentifier = false;
