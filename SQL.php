@@ -69,7 +69,7 @@ class SQL
         if (
             $useSQLParams !== false
             && $useSQLParams !== "name"
-            && $useSQLParams !== "question"
+            && $useSQLParams !== "question mark"
         ) {
             $useSQLParams = "name";
         }
@@ -129,7 +129,7 @@ class SQL
                                     $part = str_replace("{value}", $paramName, $part);
                                     $this->query->sqlParams[$paramName] = $value;
                                 }
-                            } else if ($useSQLParams === 'question') {
+                            } else if ($useSQLParams === 'question mark') {
                                 if (
                                     ($operator === "IN" || $operator === "NOT IN")
                                     && gettype($value) === "array"
