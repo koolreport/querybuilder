@@ -76,6 +76,53 @@ $this->src('sqlserver_database')->query(
 )
 ```
 
+#### Parameterized Query and Parameters (version >= 3.0.0)
+
+When you build a query builder with data from untrusted source (says, user inputs) it's dangerous to use the query builder's generated query directly because of possible SQL injection attack. In those cases it's advisable to get the query builder's generated parameterized query together with parameters and use them to get data instead:
+
+```
+$querybuilder = DB::...;
+
+$queryWithParams = $querybuilder->toMySQL(["useSQLParams" => "name"]); // or "useSQLParams" => "question mark"
+$params = $querybuilder->getSQLParams();
+```
+
+## Set Schemas
+
+For security and authentication reasons users could set a query builder's schemas so that only tables and fields from those schemas are included in its generated queries:
+
+```
+$querybuilder = DB::...;
+
+$querybuilder->setSchemas(array(
+    "salesSchema" => array(
+        "tables" => array(
+            "customers"=>array(
+                "customerNumber"=>array(
+                    "alias"=>"Customer Number",
+                ),
+                "customerName"=>array(
+                    "alias"=>"Customer Name",
+                ),
+            ),
+            "orders"=>array(
+                "orderNumber"=>array(
+                    "alias"=>"Order Number"
+                ),
+                "orderDate"=>array(
+                    "alias"=>"Order Date",
+                    "type" => "datetime"
+                ),
+                "orderMonth" => [
+                    "expression" => "month(orderDate)",
+                ]
+            ),
+            ...
+        ),
+    ),
+    ...
+));
+```
 
 ## Retrieving Results
 
@@ -335,6 +382,20 @@ DB::table('users')
     ->where('votes', '>', 100)
     ->orWhere('name', 'John')
 ```
+
+#### Brackets in where
+
+You could add opening and closing brackets to where clause with `whereOpenBracket` and `whereCloseBracket` methods:
+
+```
+DB::table('users')
+    ->where(...)
+    ->whereOpenBracket()
+    ->where(...)
+    ->whereCloseBracket()
+```
+
+These brackets can work for multiple levels of where conditions.
 
 #### Additional Where Clauses
 

@@ -59,6 +59,7 @@ class Query
     {
         $this->schemas = $schemas;
         // Util::prettyPrint($schemas);
+        return $this;
     }
 
     public function getSchemas()
@@ -86,7 +87,7 @@ class Query
                 foreach ($fieldInfos as $f => $fieldInfo) {
 					$exp = Util::get($fieldInfo, "expression", $f);
                     if ($f === $field || "$table.$f" === $field
-						|| $exp = $field) return true;
+						|| $exp === $field) return true;
                 }
             }
         }
