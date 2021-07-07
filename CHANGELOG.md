@@ -6,6 +6,8 @@
 2. Add option to build named and question mark parameter query and its parameter values to improve security
 3. Add schemas to Query to check select validity
 4. Add ability to call procedure with parameters
+5. Add procedure call
+6. Add Oracle syntax support
 
 ## Version 2.5.3
 
