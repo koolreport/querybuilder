@@ -1,5 +1,9 @@
 # Change Log
 
+## Version
+
+1. Fixed: Small bug in generating delete query
+
 ## Version 3.0.0
 
 1. Add whereOpenBracket(), whereCloseBracket() methods

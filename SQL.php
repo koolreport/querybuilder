@@ -404,7 +404,7 @@ class SQL
     }
     protected function buildDeleteQuery($options = [])
     {
-        $sql .= "DELETE FROM ";
+        $sql = "DELETE FROM ";
         if (count($this->query->tables) == 1) {
             $sql .= $this->getFrom(array($this->query->tables[0]));
         } elseif (count($this->query->tables) > 1) {
