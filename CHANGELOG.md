@@ -1,6 +1,6 @@
 # Change Log
 
-## Version
+## Version 3.1.0
 
 1. Fixed: Small bug in generating delete query
 
