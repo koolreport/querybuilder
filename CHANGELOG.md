@@ -1,6 +1,6 @@
 # Change Log
 
-## Version 3.2.0
+## Version
 
 1. Added: Ability to query from table alias
 
