@@ -111,7 +111,11 @@ class Query
             foreach ($params[0] as $key => $value) {
                 if (gettype($value) == "string") {
                     if ($this->isTableInSchemas($params[0])) {
-                        array_push($this->tables, $value);
+                        if(is_string($key)) {
+                            array_push($this->tables, array($value,$key));
+                        } else {
+                            array_push($this->tables, $value);
+                        }
                     }
                 } elseif (is_callable($value)) {
                     $query = new Query;

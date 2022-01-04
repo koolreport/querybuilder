@@ -1,5 +1,9 @@
 # Change Log
 
+## Version 3.2.0
+
+1. Added: Ability to query from table alias
+
 ## Version 3.1.0
 
 1. Fixed: Small bug in generating delete query

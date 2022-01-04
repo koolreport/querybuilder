@@ -175,8 +175,12 @@ class SQL
         foreach ($tables as $table) {
             if (gettype($table) == "array") {
                 $class = get_class($this);
-                $interpreter = new $class($table[0], $this->identifierQuotes);
-                array_push($array, "(" . $interpreter->buildQuery() . ") " . $this->quoteIdentifier($table[1]));
+                if(is_string($table[0])) {
+                    array_push($array, $this->quoteIdentifier($table[0]) ." " . $this->quoteIdentifier($table[1]));
+                } else if($table[0] instanceof Query) {
+                    $interpreter = new $class($table[0], $this->identifierQuotes);
+                    array_push($array, "(" . $interpreter->buildQuery() . ") " . $this->quoteIdentifier($table[1]));    
+                }
             } else {
                 array_push($array, $this->quoteIdentifier($table));
             }
