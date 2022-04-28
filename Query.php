@@ -119,7 +119,11 @@ class Query
                     }
                 } elseif (is_callable($value)) {
                     $query = new Query;
-                    $value($query);
+                    //To accept the return of new query object from return of anynomous function
+                    $result = $value($query);
+                    if($result!==null) {
+                        $query = $result;
+                    }
                     array_push($this->tables, array($query, $key));
                 }
             }
