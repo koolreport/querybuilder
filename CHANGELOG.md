@@ -1,6 +1,6 @@
 # Change Log
 
-## Version
+## Version 3.3.0
 
 1. Added: Ability to return new query of anynomous alias function in from() method
 
