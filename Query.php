@@ -29,6 +29,8 @@ class Query
     public $procedures;
 
     protected $schemas;
+    public $currentSchema;
+    protected $tableAliases = [];
 
     public function __construct()
     {
@@ -46,9 +48,10 @@ class Query
         $this->procedures = array();
     }
 
-    public function call($procedureName,$params=array()) {
+    public function call($procedureName, $params = array())
+    {
         $this->type = "procedure";
-        array_push($this->procedures,array(
+        array_push($this->procedures, array(
             $procedureName,
             $params
         ));
@@ -58,6 +61,10 @@ class Query
     public function setSchemas($schemas)
     {
         $this->schemas = $schemas;
+        foreach ($this->schemas as $schemaName => $schema) {
+            if ($schemaName !== "{meta}") $this->currentSchema = $schemaName;
+            break;
+        }
         // Util::prettyPrint($schemas);
         return $this;
     }
@@ -69,29 +76,45 @@ class Query
 
     public function isTableInSchemas($table)
     {
-        if (!isset($this->schemas)) return true;
-        foreach ($this->schemas as $schema) {
-            $tableInfos = Util::get($schema, 'tables', []);
-            if (isset($tableInfos[$table])) return true;
-        }
+        if (!isset($this->schemas[$this->currentSchema])) return true;
+        $schema = $this->schemas[$this->currentSchema];
+        $tableInfos = Util::get($schema, 'tables', []);
+        if (isset($tableInfos[$table])) return true;
         return false;
-    }
+    }    
 
     public function isFieldInSchemas($field)
     {
-        // echo "isFieldInSchemas field=$field<br>";
-        if (!isset($this->schemas)) return true;
-        foreach ($this->schemas as $schema) {
-            $tableInfos = Util::get($schema, 'tables', []);
-            foreach ($tableInfos as $table => $fieldInfos) {
-                foreach ($fieldInfos as $f => $fieldInfo) {
-					$exp = Util::get($fieldInfo, "expression", $f);
-                    if ($f === $field || "$table.$f" === $field
-						|| $exp === $field) return true;
+        // return true;
+        // echo "function isFieldInSchemas field=$field<br>";
+        // echo "this->tableAliases = "; Util::prettyPrint($this->tableAliases);
+        if (!isset($this->schemas[$this->currentSchema])) return true;
+        $schema = $this->schemas[$this->currentSchema];
+        $tableInfos = Util::get($schema, 'tables', []);
+        foreach ($tableInfos as $table => $fieldInfos) {
+            $tableAliases = Util::get($this->tableAliases, $table, []);
+            foreach ($fieldInfos as $f => $fieldInfo) {
+                $exp = Util::get($fieldInfo, "expression", $f);
+                if ($f === $field|| $exp === $field) return true;
+                if ($exp === "{meta}") continue;
+                // echo "exp = $exp<br>";
+                foreach ($tableAliases as $tableAlias => $v) {
+                    if ("$tableAlias.$f" === $field) return true;
+                    $expAlias = str_ireplace($table . ".", $tableAlias . ".", $exp);
+                    // echo "expAlias = $expAlias<br>";
+                    if ($expAlias === $field) return true;
                 }
             }
         }
         return false;
+    }
+
+    public function addTableAlias($tableName, $tableAlias)
+    {
+        // echo "addTableAlias $tableName $tableAlias <br>";
+        Util::init($this->tableAliases, $tableName, []);
+        $this->tableAliases[$tableName][$tableAlias] = true;
+        return $this;
     }
 
     public function distinct()
@@ -106,25 +129,26 @@ class Query
         if (count($params) > 1) {
             foreach ($params as $param) $this->from($param);
         } elseif (gettype($params[0]) == "string") {
-            if ($this->isTableInSchemas($params[0])) $this->tables = $params;
+            $tableName = $params[0];
+            if ($this->isTableInSchemas($tableName)) array_push($this->tables, $tableName);
         } elseif (gettype($params[0]) == "array") {
-            foreach ($params[0] as $key => $value) {
-                if (gettype($value) == "string") {
-                    if ($this->isTableInSchemas($params[0])) {
-                        if(is_string($key)) {
-                            array_push($this->tables, array($value,$key));
-                        } else {
-                            array_push($this->tables, $value);
-                        }
+            foreach ($params[0] as $tableAlias => $tableName) {
+                if (gettype($tableName) == "string") {
+                    if (!$this->isTableInSchemas($tableName)) continue;
+                    if (is_numeric($tableAlias)) {
+                        array_push($this->tables, $tableName);
+                    } elseif (is_string($tableAlias)) {
+                        array_push($this->tables, array($tableName, $tableAlias));
+                        $this->addTableAlias($tableName, $tableAlias);
                     }
-                } elseif (is_callable($value)) {
+                } elseif (is_callable($tableName)) {
                     $query = new Query;
                     //To accept the return of new query object from return of anynomous function
-                    $result = $value($query);
-                    if($result!==null) {
+                    $result = $tableName($query);
+                    if ($result !== null) {
                         $query = $result;
                     }
-                    array_push($this->tables, array($query, $key));
+                    array_push($this->tables, array($query, $tableAlias));
                 }
             }
         }
@@ -292,7 +316,7 @@ class Query
         if (!$this->isFieldInSchemas($field)) return false;
         $compareOperators = array_flip([
             "=", "<", "<=", ">=", ">", "!=", "<>",
-            "is", "is not", "between", "not between", 
+            "is", "is not", "between", "not between",
             "in", "not in", "like", "not like"
         ]);
         if (!isset($compareOperators[$compareOperator])) return false;
@@ -791,8 +815,21 @@ class Query
     //---------------//
     protected function allJoin($method, $params)
     {
-        $table = $params[0];
-        if (!$this->isTableInSchemas($table)) return $this;
+        // echo "params = "; var_dump($params); echo "<br>";
+        if (gettype($params[0]) == "string") {
+            if (!$this->isTableInSchemas($params[0])) return $this;
+            else $table = $params[0];
+        } elseif (gettype($params[0]) == "array") {
+            foreach ($params[0] as $tableAlias => $tableName) {
+                if (gettype($tableName) == "string") {
+                    if ($this->isTableInSchemas($tableName)) {
+                        $table = "$tableName $tableAlias";
+                        $this->addTableAlias($tableName, $tableAlias);
+                    }
+                }
+            }
+        }
+        // echo "table = $table<br>";
         $join = array($method, $table);
         array_splice($params, 0, 1);
         if (count($params) == 1 && is_callable($params[0])) {

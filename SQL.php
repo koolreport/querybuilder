@@ -315,6 +315,7 @@ class SQL
         if ($this->query->distinct) {
             $sql .= "DISTINCT ";
         }
+        // var_dump($this->query->columns); echo "<br>";
         if (count($this->query->columns) > 0) {
             $sql .= $this->getSelect($this->query->columns);
         } else {
@@ -326,6 +327,7 @@ class SQL
             throw new \Exception("No table available in SQL Query");
         }
 
+        // var_dump($this->query->joins);
         if (count($this->query->joins) > 0) {
             $sql .= $this->getJoin($this->query->joins);
         }
