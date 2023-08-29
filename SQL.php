@@ -311,7 +311,7 @@ class SQL
 
     protected function buildSelectQuery($options = [])
     {
-        $newLine = Util::get($options, 'newLineBeforeKeyword', false) ? "\n" : "";
+        $newLine = Util::get($options, 'newLineBeforeKeyword', false) ? "\n" : " ";
         $sql = "SELECT ";
         if ($this->query->distinct) {
             $sql .= "DISTINCT ";
@@ -323,7 +323,7 @@ class SQL
             $sql .= "*";
         }
         if (count($this->query->tables) > 0) {
-            $sql .= "{$newLine} FROM " . $this->getFrom($this->query->tables);
+            $sql .= "{$newLine}FROM " . $this->getFrom($this->query->tables);
         } else {
             throw new \Exception("No table available in SQL Query");
         }
@@ -335,27 +335,27 @@ class SQL
 
         if (count($this->query->conditions) > 0) {
             $where = trim($this->getWhere($this->query->conditions, $options));
-            if (!empty($where)) $sql .= "{$newLine} WHERE " . $where;
+            if (!empty($where)) $sql .= "{$newLine}WHERE " . $where;
         }
 
         if (count($this->query->groups) > 0) {
             $groupBy = trim($this->getGroupBy($this->query->groups));
-            if (!empty($groupBy)) $sql .= "{$newLine} GROUP BY " . $groupBy;
+            if (!empty($groupBy)) $sql .= "{$newLine}GROUP BY " . $groupBy;
         }
 
         if ($this->query->having) {
             $having = trim($this->getHaving($this->query->having, $options));
-            if (!empty($having)) $sql .= "{$newLine} HAVING " . $having;
+            if (!empty($having)) $sql .= "{$newLine}HAVING " . $having;
         }
 
 
         if (count($this->query->orders) > 0) {
             $orderBy = trim($this->getOrderBy($this->query->orders));
-            if (!empty($orderBy)) $sql .= "{$newLine} ORDER BY " . $orderBy;
+            if (!empty($orderBy)) $sql .= "{$newLine}ORDER BY " . $orderBy;
         }
 
         if ($this->query->limit !== null) {
-            $sql .= "{$newLine} LIMIT " . $this->query->limit;
+            $sql .= "{$newLine}LIMIT " . $this->query->limit;
         }
 
         if ($this->query->offset !== null) {
