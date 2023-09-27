@@ -1,5 +1,8 @@
 # Change Log
 
+## Version 3.4.0
+1. Added: new line before keyword sql output mode
+
 ## Version 3.3.0
 
 1. Added: Ability to return new query of anynomous alias function in from() method
