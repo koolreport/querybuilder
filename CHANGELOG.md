@@ -1,5 +1,8 @@
 # Change Log
 
+## Version 3.4.1
+1. Fixed: SQL Server syntax for fetch rows
+
 ## Version 3.4.0
 1. Added: new line before keyword sql output mode
 
