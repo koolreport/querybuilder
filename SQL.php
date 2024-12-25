@@ -41,7 +41,10 @@ class SQL
 
     protected function escapeString($string)
     {
-        return DB::escapeString($string);
+        if($this->escapeValue) {
+            return DB::escapeString($string);
+        }
+        return $string;
     }
     protected function coverValue($value)
     {
