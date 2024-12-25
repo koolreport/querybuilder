@@ -1,5 +1,8 @@
 # Change Log
 
+## Version
+1. Added: Support SQLite
+
 ## Version 3.4.1
 1. Fixed: SQL Server syntax for fetch rows
 
@@ -8,7 +11,7 @@
 
 ## Version 3.3.0
 
-1. Added: Ability to return new query of anynomous alias function in from() method
+1. Added: Ability to return new query of anonymous alias function in from() method
 
 ## Version 3.2.0
 

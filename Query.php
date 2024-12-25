@@ -964,6 +964,13 @@ class Query
         $interpreter = new MySQL($this, $quoteIdentifier);
         return $interpreter->buildQuery($options);
     }
+    public function toSQLite($options = [])
+    {
+        if (gettype($options) === 'boolean') $quoteIdentifier = false;
+        else $quoteIdentifier = Util::get($options, 'quoteIdentifier', false);
+        $interpreter = new SQLite($this, $quoteIdentifier);
+        return $interpreter->buildQuery($options);
+    }
 
     public function toPostgreSQL($options = [])
     {
